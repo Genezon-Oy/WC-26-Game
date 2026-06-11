@@ -86,6 +86,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "World Cup 2026 Predictor" },
+      { name: "twitter:description", content: "Predict every World Cup 2026 match. Compete with friends." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a88dbfd2-556f-45e0-8bda-0b7a1ef572d3/id-preview-6f128cd6--9a24089e-acc7-4296-a85d-19c5e5122833.lovable.app-1781140780779.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a88dbfd2-556f-45e0-8bda-0b7a1ef572d3/id-preview-6f128cd6--9a24089e-acc7-4296-a85d-19c5e5122833.lovable.app-1781140780779.png" },
     ],
     links: [
       {
