@@ -2,6 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+// api-football (api-sports.io) — direct endpoint
+const API_BASE = "https://v3.football.api-sports.io";
+
 function normalize(name: string): string {
   return name
     .toLowerCase()
@@ -10,7 +13,7 @@ function normalize(name: string): string {
     .replace(/[^a-z0-9]/g, "");
 }
 
-// Map a few openfootball names → The Odds API names where they differ.
+// Map a few openfootball names → api-football names where they differ.
 const NAME_ALIASES: Record<string, string[]> = {
   "ivory coast": ["cote divoire", "cotedivoire"],
   "south korea": ["koreareplublic", "korearepublic"],
@@ -44,129 +47,108 @@ async function assertAdmin(userId: string) {
   if (!data) throw new Error("Forbidden: admin only");
 }
 
-type OddsApiOutcome = {
-  name: string;
-  price: number;
-};
+type Fixture = { fixture: { id: number; date: string }; teams: { home: { name: string }; away: { name: string } } };
 
-type OddsApiMarket = {
-  key: string;
-  outcomes: OddsApiOutcome[];
-};
-
-type OddsApiBookmaker = {
-  key: string;
-  title: string;
-  markets: OddsApiMarket[];
-};
-
-type OddsApiEvent = {
-  id: string;
-  sport_key: string;
-  sport_title: string;
-  commence_time: string;
-  home_team: string;
-  away_team: string;
-  bookmakers: OddsApiBookmaker[];
-};
-
-async function fetchOddsFromAPI(apiKey: string): Promise<OddsApiEvent[]> {
-  const url = `https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds?apiKey=${apiKey}&regions=eu&markets=h2h&oddsFormat=decimal`;
-  const res = await fetch(url);
+async function apiFetch<T>(path: string, params: Record<string, string>): Promise<T> {
+  const key = process.env.API_FOOTBALL_KEY;
+  if (!key) throw new Error("API_FOOTBALL_KEY not configured");
+  const q = new URLSearchParams(params).toString();
+  const res = await fetch(`${API_BASE}${path}?${q}`, {
+    headers: { "x-apisports-key": key },
+  });
   const text = await res.text();
-  if (!res.ok) {
-    throw new Error(`The Odds API returned ${res.status}: ${text.slice(0, 200)}`);
+  if (!res.ok) throw new Error(`api-football ${path} ${res.status}: ${text.slice(0, 200)}`);
+  let json: { response: T; errors?: unknown };
+  try { json = JSON.parse(text); } catch { throw new Error(`api-football ${path}: invalid JSON`); }
+  // api-football returns 200 with errors object/array on quota/auth issues
+  const errs = json.errors;
+  if (errs && ((Array.isArray(errs) && errs.length) || (typeof errs === "object" && Object.keys(errs as object).length))) {
+    throw new Error(`api-football ${path}: ${JSON.stringify(errs).slice(0, 300)}`);
   }
-  try {
-    return JSON.parse(text) as OddsApiEvent[];
-  } catch {
-    throw new Error("The Odds API returned invalid JSON");
-  }
+  return json.response;
 }
 
-function calculateAverageOdds(event: { home_team: string; away_team: string; bookmakers: OddsApiBookmaker[] }): { odds_1: number; odds_x: number; odds_2: number; bookmaker: string } | null {
-  let sum1 = 0, sumX = 0, sum2 = 0;
-  let count1 = 0, countX = 0, count2 = 0;
-  let bookmakersUsed = 0;
-
-  for (const bookmaker of event.bookmakers) {
-    const market = bookmaker.markets.find((m) => m.key === "h2h");
-    if (!market) continue;
-
-    const homeOutcome = market.outcomes.find((o) => namesMatch(o.name, event.home_team));
-    const awayOutcome = market.outcomes.find((o) => namesMatch(o.name, event.away_team));
-    const drawOutcome = market.outcomes.find((o) => o.name.toLowerCase() === "draw");
-
-    if (homeOutcome && awayOutcome && drawOutcome) {
-      sum1 += homeOutcome.price;
-      count1++;
-      sum2 += awayOutcome.price;
-      count2++;
-      sumX += drawOutcome.price;
-      countX++;
-      bookmakersUsed++;
+async function findFixtureId(date: string, home: string, away: string): Promise<string | null> {
+  // World Cup 2026 league id in api-football is 1; if season changes, fall back to date-only search.
+  const tryParams: Array<Record<string, string>> = [
+    { date, league: "1", season: "2026" },
+    { date },
+  ];
+  for (const params of tryParams) {
+    try {
+      const fixtures = await apiFetch<Fixture[]>("/fixtures", params);
+      const hit = fixtures.find((f) => namesMatch(f.teams.home.name, home) && namesMatch(f.teams.away.name, away));
+      if (hit) return String(hit.fixture.id);
+    } catch {
+      // try next
     }
   }
+  return null;
+}
 
-  if (bookmakersUsed === 0) return null;
+type OddsResponse = Array<{
+  fixture: { id: number };
+  bookmakers: Array<{
+    id: number;
+    name: string;
+    bets: Array<{ id: number; name: string; values: Array<{ value: string; odd: string }> }>;
+  }>;
+}>;
 
+function pickOddsFromResponse(rsp: OddsResponse): { odds_1: number; odds_x: number; odds_2: number; bookmaker: string } | null {
+  if (!rsp.length) return null;
+  // Average across all bookmakers offering "Match Winner".
+  const sums = { "1": 0, X: 0, "2": 0 };
+  const counts = { "1": 0, X: 0, "2": 0 };
+  let usedBooks = 0;
+  for (const book of rsp[0].bookmakers) {
+    const bet = book.bets.find((b) => b.name === "Match Winner" || b.id === 1);
+    if (!bet) continue;
+    const h = bet.values.find((v) => v.value === "Home" || v.value === "1");
+    const d = bet.values.find((v) => v.value === "Draw" || v.value === "X");
+    const a = bet.values.find((v) => v.value === "Away" || v.value === "2");
+    if (!h || !d || !a) continue;
+    sums["1"] += parseFloat(h.odd); counts["1"]++;
+    sums.X += parseFloat(d.odd); counts.X++;
+    sums["2"] += parseFloat(a.odd); counts["2"]++;
+    usedBooks++;
+  }
+  if (!usedBooks) return null;
   return {
-    odds_1: +(sum1 / count1).toFixed(2),
-    odds_x: +(sumX / countX).toFixed(2),
-    odds_2: +(sum2 / count2).toFixed(2),
-    bookmaker: `average (${bookmakersUsed} bookmakers)`,
+    odds_1: +(sums["1"] / counts["1"]).toFixed(2),
+    odds_x: +(sums.X / counts.X).toFixed(2),
+    odds_2: +(sums["2"] / counts["2"]).toFixed(2),
+    bookmaker: `average (${usedBooks} bookmakers)`,
   };
 }
 
-function findMatchingEvent(
-  dbHome: string,
-  dbAway: string,
-  dbKickoff: string,
-  events: OddsApiEvent[]
-): OddsApiEvent | null {
-  const kickoffTime = new Date(dbKickoff).getTime();
-  return events.find((e) => {
-    const commenceTime = new Date(e.commence_time).getTime();
-    const daysDiff = Math.abs(commenceTime - kickoffTime) / (1000 * 60 * 60 * 24);
-    if (daysDiff > 3) return false;
-
-    const directMatch = namesMatch(e.home_team, dbHome) && namesMatch(e.away_team, dbAway);
-    const swappedMatch = namesMatch(e.home_team, dbAway) && namesMatch(e.away_team, dbHome);
-    return directMatch || swappedMatch;
-  }) || null;
-}
-
 async function snapshotOneMatch(matchId: string): Promise<{ ok: boolean; reason?: string; odds?: { odds_1: number; odds_x: number; odds_2: number } }> {
-  const apiKey = process.env.ODDS_API_KEY;
-  if (!apiKey) return { ok: false, reason: "ODDS_API_KEY not configured" };
-
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: m, error } = await supabaseAdmin
     .from("matches")
-    .select("id, kickoff_at, home_team, away_team")
+    .select("id, kickoff_at, home_team, away_team, api_fixture_id")
     .eq("id", matchId)
     .single();
   if (error || !m) return { ok: false, reason: error?.message ?? "match not found" };
 
-  let events: OddsApiEvent[];
-  try {
-    events = await fetchOddsFromAPI(apiKey);
-  } catch (err) {
-    return { ok: false, reason: (err as Error).message };
+  let fixtureId = m.api_fixture_id;
+  if (!fixtureId) {
+    const date = m.kickoff_at.slice(0, 10);
+    fixtureId = await findFixtureId(date, m.home_team, m.away_team);
+    if (fixtureId) {
+      await supabaseAdmin.from("matches").update({ api_fixture_id: fixtureId }).eq("id", m.id);
+    }
   }
+  if (!fixtureId) return { ok: false, reason: "fixture not found in api-football" };
 
-  const matchedEvent = findMatchingEvent(m.home_team, m.away_team, m.kickoff_at, events);
-  if (!matchedEvent) {
-    return { ok: false, reason: `Match not found in The Odds API response for ${m.home_team} vs ${m.away_team}` };
-  }
-
-  const picked = calculateAverageOdds(matchedEvent);
-  if (!picked) return { ok: false, reason: "No h2h odds available for this match in The Odds API" };
+  const rsp = await apiFetch<OddsResponse>("/odds", { fixture: fixtureId });
+  const picked = pickOddsFromResponse(rsp);
+  if (!picked) return { ok: false, reason: "no Match Winner odds available" };
 
   const minutesToKickoff = (new Date(m.kickoff_at).getTime() - Date.now()) / 60000;
-  const shouldLock = minutesToKickoff <= 30;
+  const shouldLock = minutesToKickoff <= 30; // lock when ≤30 min to kickoff (or already started)
 
-  const { error: upsertErr } = await supabaseAdmin
+  await supabaseAdmin
     .from("match_odds")
     .upsert(
       {
@@ -175,14 +157,12 @@ async function snapshotOneMatch(matchId: string): Promise<{ ok: boolean; reason?
         odds_x: picked.odds_x,
         odds_2: picked.odds_2,
         bookmaker: picked.bookmaker,
-        source: "the-odds-api",
+        source: "api-football",
         snapshot_at: new Date().toISOString(),
         locked: shouldLock,
       },
       { onConflict: "match_id" },
     );
-
-  if (upsertErr) return { ok: false, reason: `Database upsert: ${upsertErr.message}` };
 
   return { ok: true, odds: { odds_1: picked.odds_1, odds_x: picked.odds_x, odds_2: picked.odds_2 } };
 }
@@ -192,82 +172,35 @@ export const adminRefreshOdds = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.userId);
-    const apiKey = process.env.ODDS_API_KEY;
-    if (!apiKey) {
-      return { updated: 0, failed: 0, errors: ["ODDS_API_KEY not configured"] };
-    }
-
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const horizonIso = new Date(Date.now() + 14 * 24 * 3600_000).toISOString(); // next 14 days
     const { data: matches } = await supabaseAdmin
       .from("matches")
-      .select("id, kickoff_at, home_team, away_team, match_odds:match_odds(locked)")
+      .select("id, kickoff_at, match_odds:match_odds(locked)")
       .lte("kickoff_at", horizonIso)
       .gte("kickoff_at", new Date(Date.now() - 3 * 3600_000).toISOString()) // include very recent kickoffs
       .order("kickoff_at", { ascending: true })
       .limit(60);
 
-    if (!matches?.length) {
-      return { updated: 0, failed: 0, errors: [] };
-    }
-
-    let events: OddsApiEvent[];
-    try {
-      events = await fetchOddsFromAPI(apiKey);
-    } catch (err) {
-      return { updated: 0, failed: matches.length, errors: [(err as Error).message] };
-    }
-
     let updated = 0;
     let failed = 0;
     const errors: string[] = [];
-
-    for (const m of matches) {
+    for (const m of matches ?? []) {
+      // skip already locked
       const odds = (m as unknown as { match_odds: Array<{ locked: boolean }> | { locked: boolean } | null }).match_odds;
       const isLocked = Array.isArray(odds) ? odds[0]?.locked : odds?.locked;
       if (isLocked) continue;
-
-      const matchedEvent = findMatchingEvent(m.home_team, m.away_team, m.kickoff_at, events);
-      if (!matchedEvent) {
+      try {
+        const r = await snapshotOneMatch(m.id);
+        if (r.ok) updated++;
+        else { failed++; if (r.reason) errors.push(`${m.id}: ${r.reason}`); }
+      } catch (e) {
         failed++;
-        errors.push(`${m.id}: match not found in The Odds API`);
-        continue;
+        errors.push(`${m.id}: ${(e as Error).message}`);
       }
-
-      const picked = calculateAverageOdds(matchedEvent);
-      if (!picked) {
-        failed++;
-        errors.push(`${m.id}: no h2h odds available`);
-        continue;
-      }
-
-      const minutesToKickoff = (new Date(m.kickoff_at).getTime() - Date.now()) / 60000;
-      const shouldLock = minutesToKickoff <= 30;
-
-      const { error: upsertErr } = await supabaseAdmin
-        .from("match_odds")
-        .upsert(
-          {
-            match_id: m.id,
-            odds_1: picked.odds_1,
-            odds_x: picked.odds_x,
-            odds_2: picked.odds_2,
-            bookmaker: picked.bookmaker,
-            source: "the-odds-api",
-            snapshot_at: new Date().toISOString(),
-            locked: shouldLock,
-          },
-          { onConflict: "match_id" },
-        );
-
-      if (upsertErr) {
-        failed++;
-        errors.push(`${m.id}: database error ${upsertErr.message}`);
-      } else {
-        updated++;
-      }
+      // Be polite to API
+      await new Promise((r) => setTimeout(r, 150));
     }
-
     return { updated, failed, errors: errors.slice(0, 10) };
   });
 
