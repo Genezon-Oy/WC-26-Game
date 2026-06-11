@@ -111,9 +111,9 @@ function AdminPage() {
       </section>
 
       <section className="rounded-2xl border border-border/60 bg-card/70 p-6 space-y-3">
-        <h2 className="font-semibold">Kertoimet (api-football)</h2>
+        <h2 className="font-semibold">Kertoimet (The Odds API)</h2>
         <p className="text-sm text-muted-foreground">
-          Hakee 1X2-kertoimet api-footballista. Kertoimet lukittuvat automaattisesti, kun otteluun on ≤30 min.
+          Hakee 1X2-kertoimet The Odds API:sta. Kertoimet lukittuvat automaattisesti, kun otteluun on ≤30 min.
           Lukitut kertoimet määräävät pelaajien pisteet (oikea veikkaus = kerroin).
         </p>
         <div className="flex gap-2 flex-wrap">
