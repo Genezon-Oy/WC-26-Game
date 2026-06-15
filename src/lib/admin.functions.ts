@@ -116,6 +116,31 @@ export const adminResetPassword = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ---- Admin: delete user ----
+export const adminDeleteUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ user_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Manual cascade delete to avoid FK constraints if not set on DB
+    await Promise.all([
+      supabaseAdmin.from("predictions").delete().eq("user_id", data.user_id),
+      supabaseAdmin.from("futures_picks").delete().eq("user_id", data.user_id),
+      supabaseAdmin.from("user_roles").delete().eq("user_id", data.user_id),
+    ]);
+
+    // Profiles
+    await supabaseAdmin.from("profiles").delete().eq("id", data.user_id);
+
+    // Auth user
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });
+
 // ---- Admin: list all users with roles ----
 export const adminListUsers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

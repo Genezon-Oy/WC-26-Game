@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import {
   adminCreateUser,
+  adminDeleteUser,
   adminListUsers,
   adminResetPassword,
   adminSyncFixtures,
@@ -18,6 +19,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { flag } from "@/lib/flags";
 
@@ -30,6 +42,7 @@ function AdminPage() {
   const sync = useServerFn(adminSyncFixtures);
   const list = useServerFn(adminListUsers);
   const create = useServerFn(adminCreateUser);
+  const delUser = useServerFn(adminDeleteUser);
   const reset = useServerFn(adminResetPassword);
   const setResult = useServerFn(adminSetResult);
   const poll = useServerFn(adminPollLive);
@@ -390,7 +403,15 @@ function AdminPage() {
         {users.isLoading && <p className="text-muted-foreground text-sm">Ladataan…</p>}
         <ul className="divide-y divide-border/60">
           {users.data?.map((p) => (
-            <UserRow key={p.id} player={p} reset={reset} />
+            <UserRow
+              key={p.id}
+              player={p}
+              reset={reset}
+              del={async (args) => {
+                await delUser(args);
+                qc.invalidateQueries();
+              }}
+            />
           ))}
         </ul>
       </section>
@@ -403,9 +424,11 @@ function AdminPage() {
 function UserRow({
   player,
   reset,
+  del,
 }: {
   player: { id: string; username: string; display_name: string; roles: string[] };
   reset: (args: { data: { user_id: string; password: string } }) => Promise<unknown>;
+  del: (args: { data: { user_id: string } }) => Promise<unknown>;
 }) {
   const [pw, setPw] = useState("");
   const mut = useMutation({
@@ -416,6 +439,13 @@ function UserRow({
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const delMut = useMutation({
+    mutationFn: () => del({ data: { user_id: player.id } }),
+    onSuccess: () => toast.success(`Pelaaja ${player.username} poistettu`),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <li className="py-3 flex flex-col sm:flex-row sm:items-center gap-3">
       <div className="flex-1">
@@ -430,7 +460,12 @@ function UserRow({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <Input value={pw} onChange={(e) => setPw(e.target.value)} className="w-44" />
+        <Input
+          value={pw}
+          onChange={(e) => setPw(e.target.value)}
+          className="w-32 sm:w-44"
+          placeholder="Uusi salasana"
+        />
         <Button
           size="sm"
           variant="secondary"
@@ -439,6 +474,31 @@ function UserRow({
         >
           Vaihda
         </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button size="sm" variant="destructive" disabled={delMut.isPending}>
+              {delMut.isPending ? "Poistetaan..." : "Poista"}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Haluatko varmasti poistaa pelaajan?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tämä toiminto on lopullinen. Pelaajan <strong>{player.username}</strong> kaikki
+                veikkaukset, pisteet ja käyttäjätili poistetaan pysyvästi. Tätä ei voi perua.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Peruuta</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => delMut.mutate()}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Kyllä, poista pelaaja
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </li>
   );
