@@ -295,7 +295,7 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
                 <UITooltip>
                   <TooltipTrigger asChild>
                     <span className="font-bold text-lg tabular-nums leading-none tracking-tight cursor-help border-b border-dashed border-muted-foreground/40 pb-0.5">
-                      {p.displayScore.toFixed(2)}
+                      {p.total.toFixed(2)}
                     </span>
                   </TooltipTrigger>
                   <TooltipContent
