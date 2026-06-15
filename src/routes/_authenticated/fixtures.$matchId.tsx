@@ -20,7 +20,7 @@ function MatchDetail() {
       const [{ data: match }, { data: preds }, { data: oddsData }] = await Promise.all([
         supabase.from("matches").select("*").eq("id", matchId).single(),
         supabase.from("predictions").select("*").eq("match_id", matchId),
-        supabase.from("match_odds").select("*").eq("match_id", matchId).single(),
+        supabase.from("match_odds").select("*").eq("match_id", matchId).maybeSingle(),
       ]);
       const my = userId ? ((preds ?? []).find((p) => p.user_id === userId) ?? null) : null;
       // Get player names for predictions visible after kickoff
