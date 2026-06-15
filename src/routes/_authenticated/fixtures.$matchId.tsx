@@ -21,7 +21,7 @@ function MatchDetail() {
         supabase.from("matches").select("*").eq("id", matchId).single(),
         supabase.from("predictions").select("*").eq("match_id", matchId),
       ]);
-      const my = userId ? (preds ?? []).find((p) => p.user_id === userId) ?? null : null;
+      const my = userId ? ((preds ?? []).find((p) => p.user_id === userId) ?? null) : null;
       // Get player names for predictions visible after kickoff
       const userIds = (preds ?? []).map((p) => p.user_id);
       const { data: profiles } =
@@ -36,13 +36,14 @@ function MatchDetail() {
   const m = data?.match;
   const locked = m ? new Date(m.kickoff_at).getTime() <= Date.now() : false;
   const finished = m?.home_score !== null && m?.home_score !== undefined;
-  const actualPick: "1" | "X" | "2" | null = finished && m
-    ? m.home_score! > m.away_score!
-      ? "1"
-      : m.home_score! === m.away_score!
-        ? "X"
-        : "2"
-    : null;
+  const actualPick: "1" | "X" | "2" | null =
+    finished && m
+      ? m.home_score! > m.away_score!
+        ? "1"
+        : m.home_score! === m.away_score!
+          ? "X"
+          : "2"
+      : null;
 
   if (isLoading || !m) return <div className="text-muted-foreground">Ladataan…</div>;
 
@@ -85,7 +86,9 @@ function MatchDetail() {
               Veikkasit{" "}
               <span className="font-bold text-foreground tabular-nums">{data.my.pick ?? "—"}</span>
               {finished && (
-                <span className="text-primary font-semibold ml-2">+{Number(data.my.points).toFixed(2)} p</span>
+                <span className="text-primary font-semibold ml-2">
+                  +{Number(data.my.points).toFixed(2)} p
+                </span>
               )}
             </p>
           ) : (
@@ -96,7 +99,9 @@ function MatchDetail() {
             {data?.my ? (
               <p>
                 Veikkauksesi:{" "}
-                <span className="font-bold text-foreground tabular-nums">{data.my.pick ?? "—"}</span>
+                <span className="font-bold text-foreground tabular-nums">
+                  {data.my.pick ?? "—"}
+                </span>
               </p>
             ) : (
               <p className="text-muted-foreground text-sm">Et ole veikannut tätä ottelua vielä.</p>
@@ -128,9 +133,13 @@ function MatchDetail() {
                     <li key={p.id} className="flex items-center justify-between py-2 text-sm">
                       <span>{profile?.display_name ?? "Pelaaja"}</span>
                       <span className="tabular-nums">
-                        <span className={`font-semibold ${correct ? "text-accent" : ""}`}>{p.pick ?? "—"}</span>
+                        <span className={`font-semibold ${correct ? "text-accent" : ""}`}>
+                          {p.pick ?? "—"}
+                        </span>
                         {finished && (
-                          <span className="ml-3 text-primary font-semibold">+{Number(p.points).toFixed(2)}</span>
+                          <span className="ml-3 text-primary font-semibold">
+                            +{Number(p.points).toFixed(2)}
+                          </span>
                         )}
                       </span>
                     </li>

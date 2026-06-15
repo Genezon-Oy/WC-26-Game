@@ -55,9 +55,13 @@ function AuthPage() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 text-2xl font-bold tracking-tight">
             <Trophy className="w-6 h-6 text-accent" />
-            <span>MM&nbsp;<span className="text-primary">'26</span> Veikkaus</span>
+            <span>
+              MM&nbsp;<span className="text-primary">'26</span> Veikkaus
+            </span>
           </div>
-          <p className="text-sm text-muted-foreground mt-2">Kirjaudu sisään kaveriporukan tunnuksilla</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Kirjaudu sisään kaveriporukan tunnuksilla
+          </p>
         </div>
         <form
           onSubmit={handleLogin}
@@ -72,7 +76,6 @@ function AuthPage() {
               autoFocus
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="esim. pekka"
             />
           </div>
           <div className="space-y-2">

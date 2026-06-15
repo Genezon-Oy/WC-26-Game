@@ -1,7 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { MatchCard, type MatchCardData, type PredictionDisplay, type PickValue } from "@/components/MatchCard";
+import {
+  MatchCard,
+  type MatchCardData,
+  type PredictionDisplay,
+  type PickValue,
+} from "@/components/MatchCard";
 
 export const Route = createFileRoute("/_authenticated/predictions")({
   component: PredictionsPage,
@@ -32,7 +37,11 @@ function PredictionsPage() {
           : Promise.resolve({ data: [] as never[] }),
       ]);
       const map = new Map<string, PredictionDisplay>();
-      for (const p of (preds ?? []) as Array<{ match_id: string; pick: PickValue | null; points: number }>)
+      for (const p of (preds ?? []) as Array<{
+        match_id: string;
+        pick: PickValue | null;
+        points: number;
+      }>)
         map.set(p.match_id, { pick: p.pick, points: p.points });
       return {
         upcoming: (upcoming ?? []) as MatchCardData[],
@@ -56,9 +65,17 @@ function PredictionsPage() {
         </p>
       </div>
 
-      <Section title={`Odottaa veikkaustasi (${pending.length})`} list={pending} preds={data.preds} />
+      <Section
+        title={`Odottaa veikkaustasi (${pending.length})`}
+        list={pending}
+        preds={data.preds}
+      />
       <Section title={`Lähetetyt (${submitted.length})`} list={submitted} preds={data.preds} />
-      <Section title="Tulokset" list={data.past.filter((m) => m.home_score !== null)} preds={data.preds} />
+      <Section
+        title="Tulokset"
+        list={data.past.filter((m) => m.home_score !== null)}
+        preds={data.preds}
+      />
     </div>
   );
 }
@@ -75,7 +92,9 @@ function Section({
   if (list.length === 0) return null;
   return (
     <section>
-      <h2 className="text-sm uppercase tracking-wider text-muted-foreground font-semibold mb-3">{title}</h2>
+      <h2 className="text-sm uppercase tracking-wider text-muted-foreground font-semibold mb-3">
+        {title}
+      </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {list.map((m) => (
           <MatchCard key={m.id} match={m} prediction={preds.get(m.id)} />

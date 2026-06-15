@@ -50,8 +50,12 @@ function LeaderboardPage() {
                 </td>
                 <td className="p-3 font-medium">{row.display_name}</td>
                 <td className="p-3 text-center tabular-nums">{row.correct}</td>
-                <td className="p-3 text-center tabular-nums text-muted-foreground">{row.settled}</td>
-                <td className="p-3 text-right font-bold tabular-nums text-lg">{row.total.toFixed(2)}</td>
+                <td className="p-3 text-center tabular-nums text-muted-foreground">
+                  {row.settled}
+                </td>
+                <td className="p-3 text-right font-bold tabular-nums text-lg">
+                  {row.total.toFixed(2)}
+                </td>
               </tr>
             ))}
             {data.length === 0 && (

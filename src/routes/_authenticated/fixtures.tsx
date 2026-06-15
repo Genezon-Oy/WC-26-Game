@@ -2,7 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MatchCard, type MatchCardData, type PredictionDisplay, type PickValue } from "@/components/MatchCard";
+import {
+  MatchCard,
+  type MatchCardData,
+  type PredictionDisplay,
+  type PickValue,
+} from "@/components/MatchCard";
 
 type FixtureRow = MatchCardData & { stage: string };
 import { Input } from "@/components/ui/input";
@@ -33,9 +38,16 @@ function FixturesPage() {
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return new Map<string, PredictionDisplay>();
-      const { data } = await supabase.from("predictions").select("match_id, pick, points").eq("user_id", u.user.id);
+      const { data } = await supabase
+        .from("predictions")
+        .select("match_id, pick, points")
+        .eq("user_id", u.user.id);
       const map = new Map<string, PredictionDisplay>();
-      for (const p of (data ?? []) as Array<{ match_id: string; pick: PickValue | null; points: number }>) {
+      for (const p of (data ?? []) as Array<{
+        match_id: string;
+        pick: PickValue | null;
+        points: number;
+      }>) {
         map.set(p.match_id, { pick: p.pick, points: p.points });
       }
       return map;
@@ -83,15 +95,12 @@ function FixturesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold mb-1">Ottelut & tulokset</h1>
-        <p className="text-sm text-muted-foreground">Jalkapallon MM-kisojen 2026 koko otteluohjelma.</p>
+        <p className="text-sm text-muted-foreground">
+          Jalkapallon MM-kisojen 2026 koko otteluohjelma.
+        </p>
       </div>
       <div className="flex flex-col sm:flex-row gap-3">
-        <Input
-          placeholder="Etsi joukkue, areena, lohko…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
-        />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
         <div className="flex flex-wrap gap-1.5">
           {stages.map((s) => {
             const labels: Record<string, string> = {
@@ -105,17 +114,17 @@ function FixturesPage() {
               final: "Finaali",
             };
             return (
-            <button
-              key={s}
-              onClick={() => setStage(s)}
-              className={`px-3 py-1.5 text-xs rounded-md border ${
-                stage === s
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "border-border text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {labels[s] ?? s.replace(/-/g, " ")}
-            </button>
+              <button
+                key={s}
+                onClick={() => setStage(s)}
+                className={`px-3 py-1.5 text-xs rounded-md border ${
+                  stage === s
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {labels[s] ?? s.replace(/-/g, " ")}
+              </button>
             );
           })}
         </div>
@@ -123,7 +132,8 @@ function FixturesPage() {
       {isLoading && <p className="text-muted-foreground">Ladataan…</p>}
       {!isLoading && grouped.length === 0 && (
         <p className="text-muted-foreground">
-          Suodattimilla ei löytynyt otteluita. (Jos lista on tyhjä, pyydä ylläpitäjää synkronoimaan ottelut.)
+          Suodattimilla ei löytynyt otteluita. (Jos lista on tyhjä, pyydä ylläpitäjää synkronoimaan
+          ottelut.)
         </p>
       )}
       {grouped.map(([day, list]) => (

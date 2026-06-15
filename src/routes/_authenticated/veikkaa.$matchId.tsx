@@ -27,24 +27,38 @@ function VeikkaaMatch() {
       const { data: u } = await supabase.auth.getUser();
       const userId = u.user?.id;
       const nowIso = new Date().toISOString();
-      const [{ data: match }, { data: upcoming }, { data: preds }, { data: odds }] = await Promise.all([
-        supabase.from("matches").select("*").eq("id", matchId).single(),
-        supabase
-          .from("matches")
-          .select("id, kickoff_at")
-          .gte("kickoff_at", nowIso)
-          .order("kickoff_at", { ascending: true })
-          .limit(80),
-        userId
-          ? supabase.from("predictions").select("match_id, pick").eq("user_id", userId)
-          : Promise.resolve({ data: [] as never[] }),
-        supabase.from("match_odds").select("*").eq("match_id", matchId).maybeSingle(),
-      ]);
-      const predSet = new Set<string>(((preds ?? []) as Array<{ match_id: string }>).map((p) => p.match_id));
+      const [{ data: match }, { data: upcoming }, { data: preds }, { data: odds }] =
+        await Promise.all([
+          supabase.from("matches").select("*").eq("id", matchId).single(),
+          supabase
+            .from("matches")
+            .select("id, kickoff_at")
+            .gte("kickoff_at", nowIso)
+            .order("kickoff_at", { ascending: true })
+            .limit(80),
+          userId
+            ? supabase.from("predictions").select("match_id, pick").eq("user_id", userId)
+            : Promise.resolve({ data: [] as never[] }),
+          supabase.from("match_odds").select("*").eq("match_id", matchId).maybeSingle(),
+        ]);
+      const predSet = new Set<string>(
+        ((preds ?? []) as Array<{ match_id: string }>).map((p) => p.match_id),
+      );
       const my = ((preds ?? []) as Array<{ match_id: string; pick: Pick | null }>).find(
         (p) => p.match_id === matchId,
       );
-      return { match, upcoming: upcoming ?? [], predSet, my, odds: odds as { odds_1: number | null; odds_x: number | null; odds_2: number | null; locked: boolean } | null };
+      return {
+        match,
+        upcoming: upcoming ?? [],
+        predSet,
+        my,
+        odds: odds as {
+          odds_1: number | null;
+          odds_x: number | null;
+          odds_2: number | null;
+          locked: boolean;
+        } | null,
+      };
     },
   });
 
@@ -112,8 +126,12 @@ function VeikkaaMatch() {
         <h1 className="text-2xl font-bold">Valmis!</h1>
         <p className="text-muted-foreground">Olet veikannut kaikki tulevat ottelut.</p>
         <div className="flex gap-3 justify-center pt-2">
-          <Button asChild variant="outline"><Link to="/dashboard">Koti</Link></Button>
-          <Button asChild><Link to="/leaderboard">Tulostaulu</Link></Button>
+          <Button asChild variant="outline">
+            <Link to="/dashboard">Koti</Link>
+          </Button>
+          <Button asChild>
+            <Link to="/leaderboard">Tulostaulu</Link>
+          </Button>
         </div>
       </div>
     );
@@ -122,7 +140,10 @@ function VeikkaaMatch() {
   return (
     <div className="max-w-xl mx-auto space-y-5">
       <div className="flex items-center justify-between text-sm">
-        <Link to="/veikkaa" className="text-muted-foreground hover:text-foreground flex items-center gap-1">
+        <Link
+          to="/veikkaa"
+          className="text-muted-foreground hover:text-foreground flex items-center gap-1"
+        >
           <ArrowLeft className="w-4 h-4" /> Veikkaa
         </Link>
         {queue.index >= 0 && (
@@ -134,7 +155,7 @@ function VeikkaaMatch() {
 
       <div className="rounded-2xl border border-border/60 bg-card/70 p-6">
         <div className="text-center text-xs uppercase tracking-wider text-muted-foreground">
-          {m.group_code ? `Lohko ${m.group_code}` : m.matchday ?? "Pudotuspelit"} ·{" "}
+          {m.group_code ? `Lohko ${m.group_code}` : (m.matchday ?? "Pudotuspelit")} ·{" "}
           {kickoff.toLocaleString("fi-FI", {
             weekday: "short",
             day: "numeric",
@@ -197,7 +218,11 @@ function VeikkaaMatch() {
           disabled={mut.isPending || !pick}
           onClick={() => mut.mutate()}
         >
-          {mut.isPending ? "Tallennetaan…" : data?.my ? "Päivitä ja seuraava" : "Tallenna ja seuraava"}
+          {mut.isPending
+            ? "Tallennetaan…"
+            : data?.my
+              ? "Päivitä ja seuraava"
+              : "Tallenna ja seuraava"}
           <ArrowRight className="w-4 h-4 ml-2" />
         </Button>
         <Button variant="ghost" className="w-full" onClick={goNext} disabled={mut.isPending}>

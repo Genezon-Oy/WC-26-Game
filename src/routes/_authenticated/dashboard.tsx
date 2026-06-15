@@ -31,11 +31,13 @@ function Dashboard() {
         userId
           ? supabase.from("predictions").select("*").eq("user_id", userId)
           : Promise.resolve({ data: [] as never[] }),
-        supabase
-          .from("profiles")
-          .select("id, username, display_name"),
+        supabase.from("profiles").select("id, username, display_name"),
         userId
-          ? supabase.from("profiles").select("avatar_url, display_name").eq("id", userId).maybeSingle()
+          ? supabase
+              .from("profiles")
+              .select("avatar_url, display_name")
+              .eq("id", userId)
+              .maybeSingle()
           : Promise.resolve({ data: null }),
       ]);
       const preds = new Map<string, PredictionDisplay>();
@@ -46,21 +48,18 @@ function Dashboard() {
       }>) {
         preds.set(p.match_id, { pick: p.pick, points: p.points });
       }
-      const { data: allPreds } = await supabase
-        .from("predictions")
-        .select("user_id, points");
+      const { data: allPreds } = await supabase.from("predictions").select("user_id, points");
       const totals = new Map<string, number>();
       for (const p of allPreds ?? []) {
         totals.set(p.user_id, (totals.get(p.user_id) ?? 0) + Number(p.points));
       }
-      const myRank =
-        userId
-          ? (profiles.data ?? [])
-              .map((u) => ({ id: u.id, total: totals.get(u.id) ?? 0 }))
-              .sort((a, b) => b.total - a.total)
-              .findIndex((u) => u.id === userId) + 1 || null
-          : null;
-      const myTotal = userId ? totals.get(userId) ?? 0 : 0;
+      const myRank = userId
+        ? (profiles.data ?? [])
+            .map((u) => ({ id: u.id, total: totals.get(u.id) ?? 0 }))
+            .sort((a, b) => b.total - a.total)
+            .findIndex((u) => u.id === userId) + 1 || null
+        : null;
+      const myTotal = userId ? (totals.get(userId) ?? 0) : 0;
       const upcomingList = upcoming.data ?? [];
       const nextMatch = upcomingList[0] ?? null;
       const todayEnd = new Date();
@@ -110,7 +109,10 @@ function Dashboard() {
           <div className="text-xs text-muted-foreground uppercase tracking-wider">Sijasi</div>
           <div className="text-2xl font-bold tabular-nums text-primary">
             {data.myRank ? `#${data.myRank}` : "—"}
-            <span className="text-sm text-muted-foreground font-normal"> · {data.myTotal.toFixed(2)} p</span>
+            <span className="text-sm text-muted-foreground font-normal">
+              {" "}
+              · {data.myTotal.toFixed(2)} p
+            </span>
           </div>
         </div>
       </section>
@@ -197,7 +199,7 @@ function NextMatchHero({
           <Trophy className="w-3.5 h-3.5" /> Seuraava ottelu
         </span>
         <span>
-          {match.group_code ? `Lohko ${match.group_code}` : match.matchday ?? "Pudotuspelit"}
+          {match.group_code ? `Lohko ${match.group_code}` : (match.matchday ?? "Pudotuspelit")}
         </span>
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">

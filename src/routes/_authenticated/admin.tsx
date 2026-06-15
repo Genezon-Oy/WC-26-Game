@@ -91,7 +91,9 @@ function AdminPage() {
     <div className="space-y-8 max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold">Ylläpito</h1>
-        <p className="text-sm text-muted-foreground">Hallinnoi otteluita, tuloksia ja pelaajatunnuksia.</p>
+        <p className="text-sm text-muted-foreground">
+          Hallinnoi otteluita, tuloksia ja pelaajatunnuksia.
+        </p>
       </div>
 
       <section className="rounded-2xl border border-border/60 bg-card/70 p-6 space-y-3">
@@ -113,8 +115,8 @@ function AdminPage() {
       <section className="rounded-2xl border border-border/60 bg-card/70 p-6 space-y-3">
         <h2 className="font-semibold">Kertoimet (The Odds API)</h2>
         <p className="text-sm text-muted-foreground">
-          Hakee 1X2-kertoimet The Odds API:sta. Kertoimet lukittuvat automaattisesti, kun otteluun on ≤30 min.
-          Lukitut kertoimet määräävät pelaajien pisteet (oikea veikkaus = kerroin).
+          Hakee 1X2-kertoimet The Odds API:sta. Kertoimet lukittuvat automaattisesti, kun otteluun
+          on ≤30 min. Lukitut kertoimet määräävät pelaajien pisteet (oikea veikkaus = kerroin).
         </p>
         <div className="flex gap-2 flex-wrap">
           <Button onClick={() => oddsMut.mutate()} disabled={oddsMut.isPending}>
@@ -131,11 +133,7 @@ function AdminPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label>Käyttäjänimi</Label>
-            <Input
-              value={u.username}
-              onChange={(e) => setU({ ...u, username: e.target.value })}
-              placeholder="pekka"
-            />
+            <Input value={u.username} onChange={(e) => setU({ ...u, username: e.target.value })} />
           </div>
           <div className="space-y-1">
             <Label>Salasana</Label>
@@ -143,7 +141,6 @@ function AdminPage() {
               type="text"
               value={u.password}
               onChange={(e) => setU({ ...u, password: e.target.value })}
-              placeholder="väh. 6 merkkiä"
             />
           </div>
           <div className="space-y-1 sm:col-span-2">
@@ -151,7 +148,6 @@ function AdminPage() {
             <Input
               value={u.display_name}
               onChange={(e) => setU({ ...u, display_name: e.target.value })}
-              placeholder="Pekka P."
             />
           </div>
           <label className="flex items-center gap-2 text-sm">
@@ -208,17 +204,14 @@ function UserRow({
           {player.display_name}{" "}
           <span className="text-muted-foreground text-xs">@{player.username}</span>
           {player.roles.includes("admin") && (
-            <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-accent/20 text-accent">ylläpitäjä</span>
+            <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-accent/20 text-accent">
+              ylläpitäjä
+            </span>
           )}
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <Input
-          placeholder="uusi salasana"
-          value={pw}
-          onChange={(e) => setPw(e.target.value)}
-          className="w-44"
-        />
+        <Input value={pw} onChange={(e) => setPw(e.target.value)} className="w-44" />
         <Button
           size="sm"
           variant="secondary"
@@ -236,7 +229,9 @@ function ResultEntry({
   setResult,
   qc,
 }: {
-  setResult: (args: { data: { match_id: string; home_score: number; away_score: number } }) => Promise<unknown>;
+  setResult: (args: {
+    data: { match_id: string; home_score: number; away_score: number };
+  }) => Promise<unknown>;
   qc: ReturnType<typeof useQueryClient>;
 }) {
   const matches = useQuery({
@@ -266,7 +261,9 @@ function ResultEntry({
       }),
     onSuccess: () => {
       toast.success("Tulos tallennettu ja pisteet laskettu");
-      setMatchId(""); setHome(""); setAway("");
+      setMatchId("");
+      setHome("");
+      setAway("");
       qc.invalidateQueries();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -289,15 +286,33 @@ function ResultEntry({
             <option value="">— valitse ottelu —</option>
             {matches.data?.map((m) => (
               <option key={m.id} value={m.id}>
-                {new Date(m.kickoff_at).toLocaleDateString("fi-FI")} {flag(m.home_team)} {m.home_team} – {m.away_team} {flag(m.away_team)}{" "}
+                {new Date(m.kickoff_at).toLocaleDateString("fi-FI")} {flag(m.home_team)}{" "}
+                {m.home_team} – {m.away_team} {flag(m.away_team)}{" "}
                 {m.home_score !== null ? `(${m.home_score}-${m.away_score})` : ""}
               </option>
             ))}
           </select>
         </div>
-        <Input type="number" min={0} max={20} value={home} onChange={(e) => setHome(e.target.value)} className="w-20" />
-        <Input type="number" min={0} max={20} value={away} onChange={(e) => setAway(e.target.value)} className="w-20" />
-        <Button onClick={() => mut.mutate()} disabled={!matchId || home === "" || away === "" || mut.isPending}>
+        <Input
+          type="number"
+          min={0}
+          max={20}
+          value={home}
+          onChange={(e) => setHome(e.target.value)}
+          className="w-20"
+        />
+        <Input
+          type="number"
+          min={0}
+          max={20}
+          value={away}
+          onChange={(e) => setAway(e.target.value)}
+          className="w-20"
+        />
+        <Button
+          onClick={() => mut.mutate()}
+          disabled={!matchId || home === "" || away === "" || mut.isPending}
+        >
           Tallenna
         </Button>
       </div>

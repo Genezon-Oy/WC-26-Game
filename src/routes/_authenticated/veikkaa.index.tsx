@@ -1,7 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { MatchCard, type MatchCardData, type PredictionDisplay, type PickValue } from "@/components/MatchCard";
+import {
+  MatchCard,
+  type MatchCardData,
+  type PredictionDisplay,
+  type PickValue,
+} from "@/components/MatchCard";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 
@@ -29,7 +34,11 @@ function VeikkaaIndex() {
           : Promise.resolve({ data: [] as never[] }),
       ]);
       const predMap = new Map<string, PredictionDisplay>();
-      for (const p of (preds ?? []) as Array<{ match_id: string; pick: PickValue | null; points: number }>) {
+      for (const p of (preds ?? []) as Array<{
+        match_id: string;
+        pick: PickValue | null;
+        points: number;
+      }>) {
         predMap.set(p.match_id, { pick: p.pick, points: p.points });
       }
       const upcomingList = (upcoming ?? []) as MatchCardData[];
@@ -53,7 +62,9 @@ function VeikkaaIndex() {
 
       <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/15 via-card/70 to-card/70 p-6 text-center">
         <div className="text-xs uppercase tracking-wider text-muted-foreground">Veikkaamatta</div>
-        <div className="text-5xl font-bold tabular-nums mt-2 text-primary">{data.unpredicted.length}</div>
+        <div className="text-5xl font-bold tabular-nums mt-2 text-primary">
+          {data.unpredicted.length}
+        </div>
         <div className="text-sm text-muted-foreground mt-1">tulevaa ottelua</div>
         {next ? (
           <Button

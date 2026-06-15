@@ -49,7 +49,9 @@ function TeamPage() {
           <div className="text-sm text-primary mt-1">Lohko {data.team.group_code}</div>
         )}
       </div>
-      <h2 className="text-sm uppercase tracking-wider text-muted-foreground font-semibold">Ottelut</h2>
+      <h2 className="text-sm uppercase tracking-wider text-muted-foreground font-semibold">
+        Ottelut
+      </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {data.matches.map((m) => (
           <MatchCard key={m.id} match={m} />

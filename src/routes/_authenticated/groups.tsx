@@ -51,16 +51,32 @@ function GroupsPage() {
         const h = list.find((s) => s.team === m.home_team);
         const a = list.find((s) => s.team === m.away_team);
         if (!h || !a) continue;
-        h.p++; a.p++;
-        h.gf += m.home_score; h.ga += m.away_score;
-        a.gf += m.away_score; a.ga += m.home_score;
-        if (m.home_score > m.away_score) { h.w++; a.l++; h.pts += 3; }
-        else if (m.home_score < m.away_score) { a.w++; h.l++; a.pts += 3; }
-        else { h.d++; a.d++; h.pts++; a.pts++; }
+        h.p++;
+        a.p++;
+        h.gf += m.home_score;
+        h.ga += m.away_score;
+        a.gf += m.away_score;
+        a.ga += m.home_score;
+        if (m.home_score > m.away_score) {
+          h.w++;
+          a.l++;
+          h.pts += 3;
+        } else if (m.home_score < m.away_score) {
+          a.w++;
+          h.l++;
+          a.pts += 3;
+        } else {
+          h.d++;
+          a.d++;
+          h.pts++;
+          a.pts++;
+        }
       }
       for (const list of groups.values()) {
         for (const s of list) s.gd = s.gf - s.ga;
-        list.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.team.localeCompare(b.team));
+        list.sort(
+          (a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.team.localeCompare(b.team),
+        );
       }
       return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
     },
@@ -72,7 +88,9 @@ function GroupsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Lohkot</h1>
-        <p className="text-sm text-muted-foreground">Sarjataulukot päivittyvät automaattisesti tulosten myötä.</p>
+        <p className="text-sm text-muted-foreground">
+          Sarjataulukot päivittyvät automaattisesti tulosten myötä.
+        </p>
       </div>
       {(!data || data.length === 0) && (
         <p className="text-muted-foreground">Ei joukkueita — synkronoi ottelut Ylläpito-sivulta.</p>
@@ -80,7 +98,9 @@ function GroupsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {data?.map(([code, list]) => (
           <div key={code} className="rounded-xl border border-border/60 bg-card/70 overflow-hidden">
-            <div className="px-4 py-2 bg-primary/10 text-primary text-sm font-semibold">Lohko {code}</div>
+            <div className="px-4 py-2 bg-primary/10 text-primary text-sm font-semibold">
+              Lohko {code}
+            </div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs uppercase text-muted-foreground">
@@ -95,9 +115,16 @@ function GroupsPage() {
               </thead>
               <tbody>
                 {list.map((s, i) => (
-                  <tr key={s.team} className={`border-t border-border/40 ${i < 2 ? "bg-primary/5" : ""}`}>
+                  <tr
+                    key={s.team}
+                    className={`border-t border-border/40 ${i < 2 ? "bg-primary/5" : ""}`}
+                  >
                     <td className="p-2">
-                      <Link to="/teams/$team" params={{ team: s.team }} className="flex items-center gap-2 hover:underline">
+                      <Link
+                        to="/teams/$team"
+                        params={{ team: s.team }}
+                        className="flex items-center gap-2 hover:underline"
+                      >
                         <Flag name={s.team} className="w-5 h-auto" />
                         <span>{s.team}</span>
                       </Link>
