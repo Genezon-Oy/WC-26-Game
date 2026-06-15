@@ -61,33 +61,33 @@ function VeikkaaIndex() {
       </div>
 
       <div
-        className={`rounded-2xl border p-6 text-center transition-colors ${data.unpredicted.length > 0 ? "border-destructive/60 bg-gradient-to-br from-destructive/20 via-destructive/5 to-card" : "border-border/60 bg-gradient-to-br from-primary/15 via-card/70 to-card/70"}`}
+        className={`rounded-2xl border p-6 text-center transition-colors ${data.unpredicted.length > 0 ? "border-accent/60 bg-gradient-to-br from-accent/20 via-accent/5 to-card" : "border-border/60 bg-gradient-to-br from-primary/15 via-card/70 to-card/70"}`}
       >
         <div
-          className={`text-xs uppercase tracking-wider font-bold ${data.unpredicted.length > 0 ? "text-destructive" : "text-muted-foreground"}`}
+          className={`text-xs uppercase tracking-wider font-bold ${data.unpredicted.length > 0 ? "text-accent" : "text-muted-foreground"}`}
         >
-          {data.unpredicted.length > 0 ? "⚠️ HUOMIO: VEIKKAUKSIA PUUTTUU!" : "Veikkaamatta"}
+          {data.unpredicted.length > 0 ? "💡 Vinkki: Veikkauksia tekemättä" : "Veikkaamatta"}
         </div>
         <div
-          className={`text-5xl font-bold tabular-nums mt-2 ${data.unpredicted.length > 0 ? "text-destructive" : "text-primary"}`}
+          className={`text-5xl font-bold tabular-nums mt-2 ${data.unpredicted.length > 0 ? "text-accent" : "text-primary"}`}
         >
           {data.unpredicted.length}
         </div>
         <div className="text-sm text-muted-foreground mt-1">tulevaa ottelua</div>
 
         {data.unpredicted.length > 0 && (
-          <p className="mt-3 text-sm font-semibold text-destructive">
-            Sääntöjen mukaan jokaiseen otteluun on pakko tehdä tasan yksi valinta!
+          <p className="mt-3 text-sm text-muted-foreground">
+            Voit rauhassa muokata veikkauksiasi aina kunkin ottelun alkupotkuun saakka. Ei haittaa vaikka unohtaisit!
           </p>
         )}
 
         {next ? (
           <Button
             size="lg"
-            className={`mt-5 ${data.unpredicted.length > 0 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}`}
+            className={`mt-5 ${data.unpredicted.length > 0 ? "bg-accent text-accent-foreground hover:bg-accent/90" : ""}`}
             onClick={() => navigate({ to: "/veikkaa/$matchId", params: { matchId: next.id } })}
           >
-            {data.unpredicted.length > 0 ? "Tee puuttuvat veikkaukset" : "Selaa veikkauksia"}
+            {data.unpredicted.length > 0 ? "Tee veikkauksia" : "Selaa veikkauksia"}
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         ) : (
