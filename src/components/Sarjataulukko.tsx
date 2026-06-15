@@ -286,17 +286,17 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
                     side="top"
                     className="bg-card/95 backdrop-blur-md border border-border/50 shadow-xl"
                   >
-                    <div className="font-semibold mb-1.5 text-[11px] uppercase tracking-wider text-muted-foreground border-b border-border/40 pb-1.5">
+                    <div className="font-semibold mb-1.5 text-[11px] uppercase tracking-wider text-zinc-400 border-b border-border/40 pb-1.5">
                       True Score
                     </div>
                     <div className="flex justify-between gap-4 items-center">
-                      <span className="text-muted-foreground">Ottelut + Futures:</span>
+                      <span className="text-zinc-300">Ottelut + Futures:</span>
                       <span className="font-bold tabular-nums text-foreground">
                         {p.displayScore.toFixed(2)} p
                       </span>
                     </div>
                     {p.matrixBonus > 0 && (
-                      <div className="flex justify-between gap-4 items-center text-accent mt-1">
+                      <div className="flex justify-between gap-4 items-center text-emerald-400 mt-1">
                         <span>Matrix-bonus:</span>
                         <span className="font-semibold tabular-nums">+{p.matrixBonus} p</span>
                       </div>
