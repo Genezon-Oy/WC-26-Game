@@ -21,6 +21,7 @@ import { Route as AuthenticatedFixturesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedVeikkaaIndexRouteImport } from './routes/_authenticated/veikkaa.index'
+import { Route as AuthenticatedFixturesIndexRouteImport } from './routes/_authenticated/fixtures.index'
 import { Route as ApiPublicSeedAdminRouteImport } from './routes/api/public/seed-admin'
 import { Route as AuthenticatedVeikkaaMatchIdRouteImport } from './routes/_authenticated/veikkaa.$matchId'
 import { Route as AuthenticatedTeamsTeamRouteImport } from './routes/_authenticated/teams.$team'
@@ -88,6 +89,12 @@ const AuthenticatedVeikkaaIndexRoute =
     path: '/veikkaa/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedFixturesIndexRoute =
+  AuthenticatedFixturesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedFixturesRoute,
+  } as any)
 const ApiPublicSeedAdminRoute = ApiPublicSeedAdminRouteImport.update({
   id: '/api/public/seed-admin',
   path: '/api/public/seed-admin',
@@ -126,13 +133,13 @@ export interface FileRoutesByFullPath {
   '/teams/$team': typeof AuthenticatedTeamsTeamRoute
   '/veikkaa/$matchId': typeof AuthenticatedVeikkaaMatchIdRoute
   '/api/public/seed-admin': typeof ApiPublicSeedAdminRoute
+  '/fixtures/': typeof AuthenticatedFixturesIndexRoute
   '/veikkaa/': typeof AuthenticatedVeikkaaIndexRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/fixtures': typeof AuthenticatedFixturesRouteWithChildren
   '/futures': typeof AuthenticatedFuturesRoute
   '/groups': typeof AuthenticatedGroupsRoute
   '/leaderboard': typeof AuthenticatedLeaderboardRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByTo {
   '/teams/$team': typeof AuthenticatedTeamsTeamRoute
   '/veikkaa/$matchId': typeof AuthenticatedVeikkaaMatchIdRoute
   '/api/public/seed-admin': typeof ApiPublicSeedAdminRoute
+  '/fixtures': typeof AuthenticatedFixturesIndexRoute
   '/veikkaa': typeof AuthenticatedVeikkaaIndexRoute
 }
 export interface FileRoutesById {
@@ -162,6 +170,7 @@ export interface FileRoutesById {
   '/_authenticated/teams/$team': typeof AuthenticatedTeamsTeamRoute
   '/_authenticated/veikkaa/$matchId': typeof AuthenticatedVeikkaaMatchIdRoute
   '/api/public/seed-admin': typeof ApiPublicSeedAdminRoute
+  '/_authenticated/fixtures/': typeof AuthenticatedFixturesIndexRoute
   '/_authenticated/veikkaa/': typeof AuthenticatedVeikkaaIndexRoute
 }
 export interface FileRouteTypes {
@@ -181,13 +190,13 @@ export interface FileRouteTypes {
     | '/teams/$team'
     | '/veikkaa/$matchId'
     | '/api/public/seed-admin'
+    | '/fixtures/'
     | '/veikkaa/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
     | '/admin'
     | '/dashboard'
-    | '/fixtures'
     | '/futures'
     | '/groups'
     | '/leaderboard'
@@ -198,6 +207,7 @@ export interface FileRouteTypes {
     | '/teams/$team'
     | '/veikkaa/$matchId'
     | '/api/public/seed-admin'
+    | '/fixtures'
     | '/veikkaa'
   id:
     | '__root__'
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/_authenticated/teams/$team'
     | '/_authenticated/veikkaa/$matchId'
     | '/api/public/seed-admin'
+    | '/_authenticated/fixtures/'
     | '/_authenticated/veikkaa/'
   fileRoutesById: FileRoutesById
 }
@@ -311,6 +322,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVeikkaaIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/fixtures/': {
+      id: '/_authenticated/fixtures/'
+      path: '/'
+      fullPath: '/fixtures/'
+      preLoaderRoute: typeof AuthenticatedFixturesIndexRouteImport
+      parentRoute: typeof AuthenticatedFixturesRoute
+    }
     '/api/public/seed-admin': {
       id: '/api/public/seed-admin'
       path: '/api/public/seed-admin'
@@ -344,10 +362,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedFixturesRouteChildren {
   AuthenticatedFixturesMatchIdRoute: typeof AuthenticatedFixturesMatchIdRoute
+  AuthenticatedFixturesIndexRoute: typeof AuthenticatedFixturesIndexRoute
 }
 
 const AuthenticatedFixturesRouteChildren: AuthenticatedFixturesRouteChildren = {
   AuthenticatedFixturesMatchIdRoute: AuthenticatedFixturesMatchIdRoute,
+  AuthenticatedFixturesIndexRoute: AuthenticatedFixturesIndexRoute,
 }
 
 const AuthenticatedFixturesRouteWithChildren =
