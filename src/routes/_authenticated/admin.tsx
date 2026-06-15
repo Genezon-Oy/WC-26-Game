@@ -237,7 +237,7 @@ function AdminPage() {
         </p>
         <div className="flex flex-col gap-3">
           <select
-            className="flex h-10 w-full md:w-96 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-10 w-full md:w-96 rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             value={manual.match_id}
             onChange={(e) => setManual({ ...manual, match_id: e.target.value })}
           >
@@ -566,7 +566,7 @@ function ResultEntry({
           <select
             value={matchId}
             onChange={(e) => setMatchId(e.target.value)}
-            className="w-full bg-input border border-border rounded-md px-2 py-2 text-sm"
+            className="flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <option value="">— valitse ottelu —</option>
             {matches.data?.map((m) => (
@@ -665,7 +665,7 @@ function HistoricalBetEntry({
           <select
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
-            className="w-full bg-input border border-border rounded-md px-2 py-2 text-sm"
+            className="flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <option value="">— valitse pelaaja —</option>
             {users?.map((u) => (
@@ -680,7 +680,7 @@ function HistoricalBetEntry({
           <select
             value={matchId}
             onChange={(e) => setMatchId(e.target.value)}
-            className="w-full bg-input border border-border rounded-md px-2 py-2 text-sm"
+            className="flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <option value="">— valitse ottelu —</option>
             {matches.data?.map((m) => (
@@ -696,7 +696,7 @@ function HistoricalBetEntry({
           <select
             value={pick}
             onChange={(e) => setPick(e.target.value as "1" | "X" | "2")}
-            className="w-24 bg-input border border-border rounded-md px-2 py-2 text-sm"
+            className="flex h-10 w-24 rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <option value="">—</option>
             <option value="1">1</option>
