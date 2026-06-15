@@ -22,7 +22,11 @@ function FuturesPage() {
   const { data: teams, isLoading: loadingTeams } = useQuery({
     queryKey: ["all-teams"],
     queryFn: async () => {
-      const { data } = await supabase.from("teams").select("name").order("name");
+      const { data } = await supabase
+        .from("teams")
+        .select("name, group_code")
+        .order("group_code")
+        .order("name");
       return data ?? [];
     },
   });
@@ -127,6 +131,7 @@ function FuturesPage() {
             {teams?.map((t) => (
               <option key={t.name} value={t.name}>
                 {t.name}
+                {t.group_code ? ` (${t.group_code})` : ""}
               </option>
             ))}
           </select>
@@ -177,6 +182,7 @@ function FuturesPage() {
                   {teams?.map((t) => (
                     <option key={t.name} value={t.name}>
                       {t.name}
+                      {t.group_code ? ` (${t.group_code})` : ""}
                     </option>
                   ))}
                 </select>
