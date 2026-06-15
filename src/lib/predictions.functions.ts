@@ -178,7 +178,8 @@ export const submitFutures = createServerFn({ method: "POST" })
       .maybeSingle();
     if (existing?.locked) throw new Error("Valinnat on jo lukittu!");
 
-    const { error } = await supabase.from("futures_picks").upsert(
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("futures_picks").upsert(
       {
         user_id: userId,
         winner: data.winner ?? null,

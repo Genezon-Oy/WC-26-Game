@@ -118,8 +118,8 @@ function FuturesPage() {
         <div className="rounded-xl bg-accent/20 border border-accent p-4 flex gap-3 text-accent-foreground">
           <Lock className="w-5 h-5 shrink-0" />
           <div className="text-sm">
-            <strong>Valinnat lukittu.</strong> Turnaus on alkanut, joten et voi enää muuttaa
-            Futures-valintojasi.
+            <strong>Valinnat lukittu.</strong> Olet lukinnut Futures-valintasi, eikä niitä voi enää
+            muuttaa.
           </div>
         </div>
       )}
