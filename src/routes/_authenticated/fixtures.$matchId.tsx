@@ -17,9 +17,10 @@ function MatchDetail() {
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       const userId = u.user?.id;
-      const [{ data: match }, { data: preds }] = await Promise.all([
+      const [{ data: match }, { data: preds }, { data: oddsData }] = await Promise.all([
         supabase.from("matches").select("*").eq("id", matchId).single(),
         supabase.from("predictions").select("*").eq("match_id", matchId),
+        supabase.from("match_odds").select("*").eq("match_id", matchId).single(),
       ]);
       const my = userId ? ((preds ?? []).find((p) => p.user_id === userId) ?? null) : null;
       // Get player names for predictions visible after kickoff
@@ -29,7 +30,7 @@ function MatchDetail() {
           ? await supabase.from("profiles").select("id, display_name, username").in("id", userIds)
           : { data: [] };
       const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
-      return { match, preds: preds ?? [], my, profileMap, userId };
+      return { match, preds: preds ?? [], my, profileMap, userId, odds: oddsData };
     },
   });
 
@@ -74,6 +75,22 @@ function MatchDetail() {
         {finished && m.home_score_ht !== null && (
           <div className="text-center text-xs text-muted-foreground mt-3">
             PA {m.home_score_ht} – {m.away_score_ht}
+          </div>
+        )}
+        {data?.odds && (
+          <div className="mt-6 flex justify-center gap-4 text-sm">
+            <div className="flex flex-col items-center">
+              <span className="text-muted-foreground text-xs uppercase">1</span>
+              <span className="font-semibold">{Number(data.odds.odds_1).toFixed(2)}</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-muted-foreground text-xs uppercase">X</span>
+              <span className="font-semibold">{Number(data.odds.odds_x).toFixed(2)}</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-muted-foreground text-xs uppercase">2</span>
+              <span className="font-semibold">{Number(data.odds.odds_2).toFixed(2)}</span>
+            </div>
           </div>
         )}
       </div>

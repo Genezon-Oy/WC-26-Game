@@ -239,7 +239,8 @@ export const adminRefreshOdds = createServerFn({ method: "POST" })
       return { updated: 0, failed: matches.length, errors: [(err as Error).message] };
     }
 
-    const oddsToUpsert: Record<string, unknown>[] = [];
+    const oddsToUpsert: import("./../integrations/supabase/types").Database["public"]["Tables"]["match_odds"]["Insert"][] =
+      [];
     let updated = 0;
     let failed = 0;
     const errors: string[] = [];

@@ -279,7 +279,8 @@ export const adminPollLive = createServerFn({ method: "POST" })
       return { ok: true, updated: 0 };
     }
 
-    const updatesToUpsert: Record<string, unknown>[] = [];
+    const updatesToUpsert: import("./../integrations/supabase/types").Database["public"]["Tables"]["matches"]["Insert"][] =
+      [];
     let updated = 0;
 
     for (const m of json.matches ?? []) {
