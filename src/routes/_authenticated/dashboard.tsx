@@ -176,7 +176,7 @@ function Dashboard() {
       {data.nextMatch && (
         <NextMatchHero
           match={data.nextMatch}
-          hasPrediction={data.predictions.has(data.nextMatch.id)}
+          prediction={data.predictions.get(data.nextMatch.id)}
         />
       )}
 
@@ -229,8 +229,9 @@ function NextMatchHero({
     group_code: string | null;
     matchday: string | null;
   };
-  hasPrediction: boolean;
+  prediction?: PredictionDisplay | null;
 }) {
+  const hasPrediction = !!prediction?.pick;
   const kickoff = new Date(match.kickoff_at);
   return (
     <Link
@@ -275,7 +276,14 @@ function NextMatchHero({
               : "bg-accent text-accent-foreground group-hover:brightness-110"
           }`}
         >
-          {hasPrediction ? "Muokkaa veikkausta" : "Veikkaa nyt"}
+          {hasPrediction ? (
+            <>
+              Veikkaus: {prediction?.pick}
+              <span className="opacity-70 font-normal ml-1">(Muokkaa)</span>
+            </>
+          ) : (
+            "Veikkaa nyt"
+          )}
           <ArrowRight className="w-4 h-4" />
         </span>
       </div>
