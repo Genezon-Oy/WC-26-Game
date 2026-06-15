@@ -10,7 +10,7 @@ import {
   adminSetResult,
   adminPollLive,
 } from "@/lib/admin.functions";
-import { adminRefreshOdds, adminLockKickoffOdds } from "@/lib/odds.functions";
+import { adminRefreshOdds, adminLockKickoffOdds, adminSetManualOdds } from "@/lib/odds.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,6 +87,39 @@ function AdminPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const setManualOdds = useServerFn(adminSetManualOdds);
+  const [manual, setManual] = useState({ match_id: "", odds_1: "", odds_x: "", odds_2: "" });
+
+  const matchesQuery = useQuery({
+    queryKey: ["admin-matches-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("matches")
+        .select("id, home_team, away_team, kickoff_at")
+        .order("kickoff_at", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const manualMut = useMutation({
+    mutationFn: () =>
+      setManualOdds({
+        data: {
+          match_id: manual.match_id,
+          odds_1: parseFloat(manual.odds_1),
+          odds_x: parseFloat(manual.odds_x),
+          odds_2: parseFloat(manual.odds_2),
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Kertoimet tallennettu ja lukittu");
+      setManual({ match_id: "", odds_1: "", odds_x: "", odds_2: "" });
+      qc.invalidateQueries();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-8 max-w-4xl">
       <div>
@@ -124,6 +157,79 @@ function AdminPage() {
           </Button>
           <Button variant="secondary" onClick={() => lockMut.mutate()} disabled={lockMut.isPending}>
             {lockMut.isPending ? "Lukitaan…" : "Lukitse kohta alkavien kertoimet"}
+          </Button>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border/60 bg-card/70 p-6 space-y-4">
+        <h2 className="font-semibold">Syötä / korjaa kertoimet manuaalisesti</h2>
+        <p className="text-sm text-muted-foreground">
+          Aseta ottelun 1X2-kertoimet käsin. Nämä kertoimet lukitaan välittömästi, jolloin API ei
+          enää ylikirjoita niitä. Tämä on hyödyllistä menneille otteluille, joista puuttuu
+          kertoimet, tai jos haluat korjata virheelliset kertoimet.
+        </p>
+        <div className="flex flex-col gap-3">
+          <select
+            className="flex h-10 w-full md:w-96 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            value={manual.match_id}
+            onChange={(e) => setManual({ ...manual, match_id: e.target.value })}
+          >
+            <option value="">-- Valitse ottelu --</option>
+            {matchesQuery.data?.map((m) => {
+              const dt = new Date(m.kickoff_at).toLocaleString("fi-FI", {
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+              return (
+                <option key={m.id} value={m.id}>
+                  {dt} - {m.home_team} vs {m.away_team}
+                </option>
+              );
+            })}
+          </select>
+          <div className="flex gap-2">
+            <Input
+              className="w-24"
+              type="number"
+              step="0.01"
+              min="1.0"
+              placeholder="1 (Koti)"
+              value={manual.odds_1}
+              onChange={(e) => setManual({ ...manual, odds_1: e.target.value })}
+            />
+            <Input
+              className="w-24"
+              type="number"
+              step="0.01"
+              min="1.0"
+              placeholder="X (Tasapeli)"
+              value={manual.odds_x}
+              onChange={(e) => setManual({ ...manual, odds_x: e.target.value })}
+            />
+            <Input
+              className="w-24"
+              type="number"
+              step="0.01"
+              min="1.0"
+              placeholder="2 (Vieras)"
+              value={manual.odds_2}
+              onChange={(e) => setManual({ ...manual, odds_2: e.target.value })}
+            />
+          </div>
+          <Button
+            className="w-fit"
+            onClick={() => manualMut.mutate()}
+            disabled={
+              manualMut.isPending ||
+              !manual.match_id ||
+              !manual.odds_1 ||
+              !manual.odds_x ||
+              !manual.odds_2
+            }
+          >
+            {manualMut.isPending ? "Tallennetaan…" : "Tallenna ja lukitse kertoimet"}
           </Button>
         </div>
       </section>

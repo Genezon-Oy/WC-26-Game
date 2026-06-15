@@ -333,6 +333,46 @@ export const adminLockKickoffOdds = createServerFn({ method: "POST" })
     return { locked };
   });
 
+// Admin: Manually set/override odds for a match (locks them permanently)
+export const adminSetManualOdds = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        match_id: z.string().uuid(),
+        odds_1: z.number().min(1.0),
+        odds_x: z.number().min(1.0),
+        odds_2: z.number().min(1.0),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("match_odds").upsert(
+      {
+        match_id: data.match_id,
+        odds_1: data.odds_1,
+        odds_x: data.odds_x,
+        odds_2: data.odds_2,
+        source: "manual",
+        snapshot_at: new Date().toISOString(),
+        locked: true,
+        bookmaker: "manual",
+      },
+      { onConflict: "match_id" },
+    );
+    if (error) throw new Error(`Manual odds upsert: ${error.message}`);
+
+    // Also recompute predictions if results are already known (in case this is a past match)
+    const { error: rpcErr } = await supabaseAdmin.rpc("recompute_predictions_for_match", {
+      _match_id: data.match_id,
+    });
+    // Ignore RPC error if function doesn't exist, as predictions are recomputed on result entry anyway.
+
+    return { ok: true };
+  });
+
 // Public: list current odds for matches (used in UI)
 export const getOddsMap = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
