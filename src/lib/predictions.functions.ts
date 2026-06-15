@@ -28,7 +28,7 @@ export const submitPrediction = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const getLeaderboard = createServerFn({ method: "GET" })
+export const getLeaderboard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
