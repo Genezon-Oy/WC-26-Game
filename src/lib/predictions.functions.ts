@@ -40,7 +40,7 @@ export const getLeaderboard = createServerFn({ method: "GET" })
       { data: results },
       { data: finished },
     ] = await Promise.all([
-      supabaseAdmin.from("profiles").select("id, username, display_name"),
+      supabaseAdmin.from("profiles").select("id, username, display_name, avatar_url"),
       supabaseAdmin.from("predictions").select("user_id, points, match_id, pick"),
       supabaseAdmin.from("match_odds").select("match_id, odds_1, odds_x, odds_2"),
       supabaseAdmin.from("futures_picks").select("*"),

@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { getLeaderboard } from "@/lib/predictions.functions";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -10,7 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { AvatarView, resolveAvatarUrls } from "@/components/AvatarUpload";
-import { Trophy, Medal } from "lucide-react";
+import { Trophy, Medal, Crown } from "lucide-react";
 
 const LINE_COLORS = [
   "hsl(var(--primary))",
@@ -26,11 +28,13 @@ function fiDay(d: Date) {
 }
 
 export function Sarjataulukko({ currentUserId }: { currentUserId: string | undefined }) {
+  const fetchLeaderboard = useServerFn(getLeaderboard);
+
   const { data, isLoading } = useQuery({
     queryKey: ["sarjataulukko"],
     queryFn: async () => {
-      const [{ data: profiles }, { data: matches }, { data: preds }] = await Promise.all([
-        supabase.from("profiles").select("id, display_name, avatar_url"),
+      const [leaderboard, { data: matches }, { data: preds }] = await Promise.all([
+        fetchLeaderboard(),
         supabase
           .from("matches")
           .select("id, kickoff_at, home_score, away_score")
@@ -57,13 +61,11 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
       }
 
       // Per user, per day points
-      const totals = new Map<string, number>();
       const perDay = new Map<string, Map<string, number>>(); // userId -> day -> points
       for (const p of preds ?? []) {
         const day = matchDay.get(p.match_id);
         if (!day) continue; // unfinished match
         const pts = Number(p.points);
-        totals.set(p.user_id, (totals.get(p.user_id) ?? 0) + pts);
         let u = perDay.get(p.user_id);
         if (!u) {
           u = new Map();
@@ -73,33 +75,28 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
       }
 
       // Resolve avatar URLs
-      const allProfiles = profiles ?? [];
-      const urls = await resolveAvatarUrls(allProfiles.map((p) => p.avatar_url));
-      const profileMap = new Map(allProfiles.map((p, i) => [p.id, { ...p, avatarUrl: urls[i] }]));
+      const urls = await resolveAvatarUrls(leaderboard.map((p) => p.avatar_url));
 
       // Rank
-      const ranked = allProfiles
-        .map((p) => ({
-          id: p.id,
-          name: p.display_name,
-          avatar: profileMap.get(p.id)?.avatarUrl ?? null,
-          total: totals.get(p.id) ?? 0,
-        }))
-        .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+      const ranked = leaderboard.map((p, i) => ({
+        id: p.id,
+        name: p.display_name || p.username || "Pelaaja",
+        avatar: urls[i] ?? null,
+        total: p.total, // Exact leaderboard total (includes Matrix/Futures)
+        basePoints: p.safe_score_raw,
+      }));
 
       // Build chart series: include starting "0" point + each finished day
       const chartDays = ["start", ...dayKeys];
       const series = chartDays.map((dKey, idx) => {
         const row: Record<string, string | number> = {
-          day: dKey === "start" ? "—" : dayLabels[dKey],
+          day: dKey === "start" ? "Alku" : dayLabels[dKey],
         };
         for (const player of ranked) {
           if (idx === 0) {
             row[player.id] = 0;
           } else {
             const userMap = perDay.get(player.id);
-            const prev = row; // unused; we'll compute cumulative below
-            void prev;
             row[player.id] = userMap?.get(dKey) ?? 0;
           }
         }
@@ -119,103 +116,166 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
 
   if (isLoading || !data) {
     return (
-      <div className="rounded-2xl border border-border/60 bg-card/70 p-6 h-64 animate-pulse" />
+      <div className="rounded-2xl border border-border/60 bg-card/70 p-6 h-[400px] animate-pulse" />
     );
   }
 
   const colorFor = (idx: number) => LINE_COLORS[idx % LINE_COLORS.length];
 
   return (
-    <section className="rounded-2xl border border-border/60 bg-gradient-to-br from-card/90 to-card/60 p-5 space-y-5">
-      <div className="flex items-center justify-between">
+    <section className="rounded-3xl border border-border/40 bg-gradient-to-b from-card/95 to-card/50 p-6 space-y-6 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold flex items-center gap-2">
+          <h2 className="text-xl font-bold flex items-center gap-2">
             <Trophy className="w-5 h-5 text-accent" />
             Sarjataulukko
           </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Pisteiden kehitys päivä kerrallaan</p>
+          <p className="text-sm text-muted-foreground mt-1">Otteluiden pistekehitys</p>
         </div>
       </div>
 
       {!data.hasData ? (
-        <div className="text-sm text-muted-foreground py-10 text-center">
-          Kuvaaja ilmestyy kun ensimmäinen ottelu on pelattu.
+        <div className="text-sm text-muted-foreground py-16 flex flex-col items-center justify-center border border-dashed border-border/60 rounded-xl">
+          <p>Kuvaaja ilmestyy kun ensimmäinen ottelu on pelattu.</p>
         </div>
       ) : (
-        <div className="h-64 w-full">
+        <div className="h-72 w-full -ml-3">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data.series} margin={{ top: 8, right: 16, bottom: 0, left: -16 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
+            <AreaChart data={data.series} margin={{ top: 10, right: 10, bottom: 0, left: 0 }}>
+              <defs>
+                {data.ranked.map((p, i) => (
+                  <linearGradient key={p.id} id={`color${p.id}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={colorFor(i)} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={colorFor(i)} stopOpacity={0} />
+                  </linearGradient>
+                ))}
+              </defs>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="hsl(var(--border))"
+                opacity={0.3}
+                vertical={false}
+              />
               <XAxis
                 dataKey="day"
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
                 tickLine={false}
+                axisLine={false}
+                dy={10}
               />
               <YAxis
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
                 tickLine={false}
+                axisLine={false}
                 allowDecimals
+                dx={-10}
               />
               <Tooltip
-                contentStyle={{
-                  background: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-                formatter={(value: number, name: string) => {
-                  const player = data.ranked.find((p) => p.id === name);
-                  return [`${Number(value).toFixed(2)} p`, player?.name ?? name];
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="bg-card/95 border border-border/50 rounded-xl shadow-xl p-3 backdrop-blur-md min-w-[160px]">
+                        <p className="text-xs font-bold text-muted-foreground mb-3 px-1 tracking-wider uppercase border-b border-border/40 pb-2">
+                          {label}
+                        </p>
+                        <div className="space-y-2">
+                          {payload
+                            .slice()
+                            .sort((a, b) => (b.value as number) - (a.value as number))
+                            .map((entry: any) => {
+                              const p = data.ranked.find((r) => r.id === entry.dataKey);
+                              return (
+                                <div
+                                  key={entry.dataKey}
+                                  className="flex items-center justify-between gap-4 text-sm"
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <div
+                                      className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]"
+                                      style={{
+                                        background: entry.stroke,
+                                        boxShadow: `0 0 10px ${entry.stroke}`,
+                                      }}
+                                    />
+                                    <span className="font-medium text-foreground">{p?.name}</span>
+                                  </div>
+                                  <span className="font-bold tabular-nums text-foreground">
+                                    {(entry.value as number).toFixed(2)}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
                 }}
               />
               {data.ranked.map((p, i) => (
-                <Line
+                <Area
                   key={p.id}
                   type="monotone"
                   dataKey={p.id}
                   stroke={colorFor(i)}
+                  fillOpacity={1}
+                  fill={`url(#color${p.id})`}
                   strokeWidth={p.id === currentUserId ? 3 : 2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
+                  activeDot={{ r: 5, strokeWidth: 0, fill: colorFor(i) }}
                   isAnimationActive
                 />
               ))}
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-1">
+      <div className="grid grid-cols-1 gap-1.5 pt-2">
         {data.ranked.map((p, i) => (
           <div
             key={p.id}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
-              p.id === currentUserId ? "bg-primary/10" : "hover:bg-muted/30"
+            className={`group flex items-center gap-4 rounded-xl px-4 py-2.5 transition-all duration-300 ${
+              p.id === currentUserId
+                ? "bg-primary/10 border border-primary/20 shadow-sm"
+                : "hover:bg-muted/40 border border-transparent hover:border-border/50"
             }`}
           >
-            <span className="w-5 text-center text-xs font-bold tabular-nums text-muted-foreground">
+            <span className="w-6 text-center text-sm font-bold tabular-nums">
               {i === 0 ? (
-                <Trophy className="w-4 h-4 text-accent inline" />
+                <Crown className="w-5 h-5 text-accent inline drop-shadow-md" />
               ) : i < 3 ? (
-                <Medal className="w-4 h-4 text-primary inline" />
+                <Medal
+                  className={`w-5 h-5 inline ${i === 1 ? "text-zinc-300" : "text-amber-600"}`}
+                />
               ) : (
-                i + 1
+                <span className="text-muted-foreground group-hover:text-foreground transition-colors">
+                  {i + 1}
+                </span>
               )}
             </span>
             <span
-              className="w-1.5 h-6 rounded-full"
+              className="w-1.5 h-8 rounded-full opacity-80 group-hover:opacity-100 transition-opacity shadow-sm"
               style={{ background: colorFor(i) }}
               aria-hidden
             />
-            <AvatarView name={p.name} url={p.avatar} size={32} />
-            <span className="flex-1 font-medium truncate">{p.name}</span>
-            <span className="font-bold tabular-nums">{p.total.toFixed(2)}</span>
+            <AvatarView name={p.name} url={p.avatar} size={36} />
+            <span className="flex-1 font-semibold text-foreground truncate">{p.name}</span>
+            <div className="flex flex-col items-end">
+              <span className="font-bold text-lg tabular-nums leading-none tracking-tight">
+                {p.total.toFixed(2)}
+              </span>
+              {p.total !== p.basePoints && (
+                <span className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5">
+                  Sis. bonukset
+                </span>
+              )}
+            </div>
           </div>
         ))}
         {data.ranked.length === 0 && (
-          <div className="text-sm text-muted-foreground py-4 text-center">Ei pelaajia vielä.</div>
+          <div className="text-sm text-muted-foreground py-6 text-center">Ei pelaajia vielä.</div>
         )}
       </div>
     </section>
