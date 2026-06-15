@@ -7,6 +7,17 @@ import { Trophy, ShieldAlert, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 
@@ -192,14 +203,28 @@ function FuturesPage() {
         </section>
 
         {!isLocked && (
-          <Button
-            size="lg"
-            className="w-full sm:w-auto"
-            onClick={() => mut.mutate()}
-            disabled={mut.isPending}
-          >
-            {mut.isPending ? "Tallennetaan..." : "Tallenna Futures-ennustukset"}
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="lg" className="w-full sm:w-auto" disabled={mut.isPending}>
+                {mut.isPending ? "Tallennetaan..." : "Tallenna ja lukitse ennustukset"}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Haluatko varmasti lukita valintasi?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tämä toiminto on lopullinen. Et voi enää muuttaa Futures-ennustuksiasi
+                  tallentamisen jälkeen. Olethan varma valinnoistasi?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Peruuta</AlertDialogCancel>
+                <AlertDialogAction onClick={() => mut.mutate()}>
+                  Kyllä, lukitse valinnat
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </div>
     </div>

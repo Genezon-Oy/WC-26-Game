@@ -185,6 +185,7 @@ export const submitFutures = createServerFn({ method: "POST" })
         golden_boot: data.golden_boot ?? null,
         most_assists: data.most_assists ?? null,
         semi_finalists: data.semi_finalists ?? null,
+        locked: true,
       },
       { onConflict: "user_id" },
     );
