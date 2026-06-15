@@ -124,25 +124,13 @@ function Dashboard() {
         <div className="flex flex-col sm:items-end gap-3 w-full sm:w-auto">
           <div className="flex sm:block justify-between items-center w-full">
             <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1.5 sm:justify-end">
-              <Trophy className="w-3.5 h-3.5" /> Safe Score
+              <Trophy className="w-3.5 h-3.5" /> Pisteet
             </div>
             <div className="text-xl font-bold tabular-nums text-primary text-right">
               {data.myRank ? `#${data.myRank}` : "—"}
               <span className="text-sm text-muted-foreground font-normal">
                 {" "}
                 · {data.myTotal.toFixed(2)} p
-              </span>
-            </div>
-          </div>
-          <div className="flex sm:block justify-between items-center w-full">
-            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1.5 sm:justify-end">
-              <TrendingUp className="w-3.5 h-3.5" /> Matrix
-            </div>
-            <div className="text-xl font-bold tabular-nums text-accent text-right">
-              {data.myMatrixRank ? `#${data.myMatrixRank}` : "—"}
-              <span className="text-sm text-muted-foreground font-normal">
-                {" "}
-                · {data.myMatrixScore.toFixed(2)} p
               </span>
             </div>
           </div>
