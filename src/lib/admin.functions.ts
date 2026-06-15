@@ -29,7 +29,11 @@ export const adminCreateUser = createServerFn({ method: "POST" })
   .inputValidator((input) =>
     z
       .object({
-        username: z.string().min(2).max(40).regex(/^[a-zA-Z0-9_]+$/, "Letters, numbers, underscore only"),
+        username: z
+          .string()
+          .min(2)
+          .max(40)
+          .regex(/^[a-zA-Z0-9_]+$/, "Letters, numbers, underscore only"),
         password: z.string().min(6).max(200),
         display_name: z.string().min(1).max(80).optional(),
         is_admin: z.boolean().optional(),
@@ -118,14 +122,13 @@ export const adminSyncFixtures = createServerFn({ method: "POST" })
     // Upsert matches
     const rows = data.matches.map((m) => {
       const stage = inferStage(m.round);
-      const winner =
-        m.score?.ft
-          ? m.score.ft[0] > m.score.ft[1]
-            ? m.team1
-            : m.score.ft[1] > m.score.ft[0]
-              ? m.team2
-              : "draw"
-          : null;
+      const winner = m.score?.ft
+        ? m.score.ft[0] > m.score.ft[1]
+          ? m.team1
+          : m.score.ft[1] > m.score.ft[0]
+            ? m.team2
+            : "draw"
+        : null;
       return {
         match_key: matchKey(m),
         stage,
@@ -221,36 +224,64 @@ export const adminPollLive = createServerFn({ method: "POST" })
         };
       }>;
     };
+    const candidates = (json.matches ?? []).map((m) => {
+      const date = m.utcDate.slice(0, 10);
+      return `${date}__${[m.homeTeam.name, m.awayTeam.name].sort().join("__vs__")}`;
+    });
+
+    if (candidates.length === 0) return { ok: true, updated: 0 };
+
+    const { data: existingMatches } = await supabaseAdmin
+      .from("matches")
+      .select("id, match_key, stage, matchday, kickoff_at, venue, home_team, away_team")
+      .in("match_key", candidates);
+
+    if (!existingMatches || existingMatches.length === 0) {
+      return { ok: true, updated: 0 };
+    }
+
+    const updatesToUpsert: any[] = [];
     let updated = 0;
+
     for (const m of json.matches ?? []) {
       const date = m.utcDate.slice(0, 10);
-      // Try both name orders since football-data names may differ slightly
-      const candidates = [
-        `${date}__${[m.homeTeam.name, m.awayTeam.name].sort().join("__vs__")}`,
-      ];
-      const { data: existing } = await supabaseAdmin
-        .from("matches")
-        .select("id")
-        .in("match_key", candidates)
-        .maybeSingle();
+      const matchKeyStr = `${date}__${[m.homeTeam.name, m.awayTeam.name].sort().join("__vs__")}`;
+
+      const existing = existingMatches.find((e) => e.match_key === matchKeyStr);
       if (!existing) continue;
+
       const status =
         m.status === "FINISHED"
           ? "finished"
           : m.status === "IN_PLAY" || m.status === "PAUSED"
             ? "live"
             : "scheduled";
-      await supabaseAdmin
-        .from("matches")
-        .update({
-          home_score: m.score.fullTime.home,
-          away_score: m.score.fullTime.away,
-          home_score_ht: m.score.halfTime.home,
-          away_score_ht: m.score.halfTime.away,
-          status,
-        })
-        .eq("id", existing.id);
+
+      let winner = null;
+      if (
+        m.status === "FINISHED" &&
+        m.score.fullTime.home !== null &&
+        m.score.fullTime.away !== null
+      ) {
+        if (m.score.fullTime.home > m.score.fullTime.away) winner = existing.home_team;
+        else if (m.score.fullTime.away > m.score.fullTime.home) winner = existing.away_team;
+        else winner = "draw";
+      }
+
+      updatesToUpsert.push({
+        ...existing,
+        home_score: m.score.fullTime.home,
+        away_score: m.score.fullTime.away,
+        home_score_ht: m.score.halfTime.home,
+        away_score_ht: m.score.halfTime.away,
+        status,
+        ...(winner ? { winner } : {}),
+      });
       updated++;
+    }
+
+    if (updatesToUpsert.length > 0) {
+      await supabaseAdmin.from("matches").upsert(updatesToUpsert, { onConflict: "id" });
     }
     return { ok: true, updated };
   });

@@ -40,7 +40,8 @@ export function toKickoffISO(date: string, time?: string): string {
 
 export function inferStage(round: string): string {
   const r = round.toLowerCase();
-  if (r.includes("final") && !r.includes("semi") && !r.includes("quarter") && !r.includes("third")) return "final";
+  if (r.includes("final") && !r.includes("semi") && !r.includes("quarter") && !r.includes("third"))
+    return "final";
   if (r.includes("third")) return "third-place";
   if (r.includes("semi")) return "semi-final";
   if (r.includes("quarter")) return "quarter-final";

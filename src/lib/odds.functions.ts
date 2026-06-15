@@ -26,8 +26,11 @@ function namesMatch(a: string, b: string): boolean {
   if (na.includes(nb) || nb.includes(na)) return true;
   for (const [k, vs] of Object.entries(NAME_ALIASES)) {
     const nk = normalize(k);
-    if ((nk === na && vs.some((v) => normalize(v) === nb)) ||
-        (nk === nb && vs.some((v) => normalize(v) === na))) return true;
+    if (
+      (nk === na && vs.some((v) => normalize(v) === nb)) ||
+      (nk === nb && vs.some((v) => normalize(v) === na))
+    )
+      return true;
   }
   return false;
 }
@@ -84,9 +87,17 @@ async function fetchOddsFromAPI(apiKey: string): Promise<OddsApiEvent[]> {
   }
 }
 
-function calculateAverageOdds(event: { home_team: string; away_team: string; bookmakers: OddsApiBookmaker[] }): { odds_1: number; odds_x: number; odds_2: number; bookmaker: string } | null {
-  let sum1 = 0, sumX = 0, sum2 = 0;
-  let count1 = 0, countX = 0, count2 = 0;
+function calculateAverageOdds(event: {
+  home_team: string;
+  away_team: string;
+  bookmakers: OddsApiBookmaker[];
+}): { odds_1: number; odds_x: number; odds_2: number; bookmaker: string } | null {
+  let sum1 = 0,
+    sumX = 0,
+    sum2 = 0;
+  let count1 = 0,
+    countX = 0,
+    count2 = 0;
   let bookmakersUsed = 0;
 
   for (const bookmaker of event.bookmakers) {
@@ -122,21 +133,27 @@ function findMatchingEvent(
   dbHome: string,
   dbAway: string,
   dbKickoff: string,
-  events: OddsApiEvent[]
+  events: OddsApiEvent[],
 ): OddsApiEvent | null {
   const kickoffTime = new Date(dbKickoff).getTime();
-  return events.find((e) => {
-    const commenceTime = new Date(e.commence_time).getTime();
-    const daysDiff = Math.abs(commenceTime - kickoffTime) / (1000 * 60 * 60 * 24);
-    if (daysDiff > 3) return false;
+  return (
+    events.find((e) => {
+      const commenceTime = new Date(e.commence_time).getTime();
+      const daysDiff = Math.abs(commenceTime - kickoffTime) / (1000 * 60 * 60 * 24);
+      if (daysDiff > 3) return false;
 
-    const directMatch = namesMatch(e.home_team, dbHome) && namesMatch(e.away_team, dbAway);
-    const swappedMatch = namesMatch(e.home_team, dbAway) && namesMatch(e.away_team, dbHome);
-    return directMatch || swappedMatch;
-  }) || null;
+      const directMatch = namesMatch(e.home_team, dbHome) && namesMatch(e.away_team, dbAway);
+      const swappedMatch = namesMatch(e.home_team, dbAway) && namesMatch(e.away_team, dbHome);
+      return directMatch || swappedMatch;
+    }) || null
+  );
 }
 
-async function snapshotOneMatch(matchId: string): Promise<{ ok: boolean; reason?: string; odds?: { odds_1: number; odds_x: number; odds_2: number } }> {
+async function snapshotOneMatch(matchId: string): Promise<{
+  ok: boolean;
+  reason?: string;
+  odds?: { odds_1: number; odds_x: number; odds_2: number };
+}> {
   const apiKey = import.meta.env.VITE_ODDS_API_KEY || process.env.ODDS_API_KEY;
   if (!apiKey) return { ok: false, reason: "ODDS_API_KEY not configured" };
 
@@ -157,7 +174,10 @@ async function snapshotOneMatch(matchId: string): Promise<{ ok: boolean; reason?
 
   const matchedEvent = findMatchingEvent(m.home_team, m.away_team, m.kickoff_at, events);
   if (!matchedEvent) {
-    return { ok: false, reason: `Match not found in The Odds API response for ${m.home_team} vs ${m.away_team}` };
+    return {
+      ok: false,
+      reason: `Match not found in The Odds API response for ${m.home_team} vs ${m.away_team}`,
+    };
   }
 
   const picked = calculateAverageOdds(matchedEvent);
@@ -166,25 +186,26 @@ async function snapshotOneMatch(matchId: string): Promise<{ ok: boolean; reason?
   const minutesToKickoff = (new Date(m.kickoff_at).getTime() - Date.now()) / 60000;
   const shouldLock = minutesToKickoff <= 30;
 
-  const { error: upsertErr } = await supabaseAdmin
-    .from("match_odds")
-    .upsert(
-      {
-        match_id: m.id,
-        odds_1: picked.odds_1,
-        odds_x: picked.odds_x,
-        odds_2: picked.odds_2,
-        bookmaker: picked.bookmaker,
-        source: "the-odds-api",
-        snapshot_at: new Date().toISOString(),
-        locked: shouldLock,
-      },
-      { onConflict: "match_id" },
-    );
+  const { error: upsertErr } = await supabaseAdmin.from("match_odds").upsert(
+    {
+      match_id: m.id,
+      odds_1: picked.odds_1,
+      odds_x: picked.odds_x,
+      odds_2: picked.odds_2,
+      bookmaker: picked.bookmaker,
+      source: "the-odds-api",
+      snapshot_at: new Date().toISOString(),
+      locked: shouldLock,
+    },
+    { onConflict: "match_id" },
+  );
 
   if (upsertErr) return { ok: false, reason: `Database upsert: ${upsertErr.message}` };
 
-  return { ok: true, odds: { odds_1: picked.odds_1, odds_x: picked.odds_x, odds_2: picked.odds_2 } };
+  return {
+    ok: true,
+    odds: { odds_1: picked.odds_1, odds_x: picked.odds_x, odds_2: picked.odds_2 },
+  };
 }
 
 // Admin: refresh (and lock if near kickoff) odds for all upcoming matches that aren't locked yet.
@@ -218,12 +239,15 @@ export const adminRefreshOdds = createServerFn({ method: "POST" })
       return { updated: 0, failed: matches.length, errors: [(err as Error).message] };
     }
 
+    const oddsToUpsert: any[] = [];
     let updated = 0;
     let failed = 0;
     const errors: string[] = [];
 
     for (const m of matches) {
-      const odds = (m as unknown as { match_odds: Array<{ locked: boolean }> | { locked: boolean } | null }).match_odds;
+      const odds = (
+        m as unknown as { match_odds: Array<{ locked: boolean }> | { locked: boolean } | null }
+      ).match_odds;
       const isLocked = Array.isArray(odds) ? odds[0]?.locked : odds?.locked;
       if (isLocked) continue;
 
@@ -244,27 +268,28 @@ export const adminRefreshOdds = createServerFn({ method: "POST" })
       const minutesToKickoff = (new Date(m.kickoff_at).getTime() - Date.now()) / 60000;
       const shouldLock = minutesToKickoff <= 30;
 
+      oddsToUpsert.push({
+        match_id: m.id,
+        odds_1: picked.odds_1,
+        odds_x: picked.odds_x,
+        odds_2: picked.odds_2,
+        bookmaker: picked.bookmaker,
+        source: "the-odds-api",
+        snapshot_at: new Date().toISOString(),
+        locked: shouldLock,
+      });
+    }
+
+    if (oddsToUpsert.length > 0) {
       const { error: upsertErr } = await supabaseAdmin
         .from("match_odds")
-        .upsert(
-          {
-            match_id: m.id,
-            odds_1: picked.odds_1,
-            odds_x: picked.odds_x,
-            odds_2: picked.odds_2,
-            bookmaker: picked.bookmaker,
-            source: "the-odds-api",
-            snapshot_at: new Date().toISOString(),
-            locked: shouldLock,
-          },
-          { onConflict: "match_id" },
-        );
+        .upsert(oddsToUpsert, { onConflict: "match_id" });
 
       if (upsertErr) {
-        failed++;
-        errors.push(`${m.id}: database error ${upsertErr.message}`);
+        failed += oddsToUpsert.length;
+        errors.push(`Database batch error: ${upsertErr.message}`);
       } else {
-        updated++;
+        updated += oddsToUpsert.length;
       }
     }
 
@@ -297,7 +322,9 @@ export const adminLockKickoffOdds = createServerFn({ method: "POST" })
       .gte("kickoff_at", new Date(Date.now() - 60_000).toISOString());
     let locked = 0;
     for (const m of matches ?? []) {
-      const odds = (m as unknown as { match_odds: Array<{ locked: boolean }> | { locked: boolean } | null }).match_odds;
+      const odds = (
+        m as unknown as { match_odds: Array<{ locked: boolean }> | { locked: boolean } | null }
+      ).match_odds;
       const isLocked = Array.isArray(odds) ? odds[0]?.locked : odds?.locked;
       if (isLocked) continue;
       const r = await snapshotOneMatch(m.id);
@@ -307,11 +334,10 @@ export const adminLockKickoffOdds = createServerFn({ method: "POST" })
   });
 
 // Public: list current odds for matches (used in UI)
-export const getOddsMap = createServerFn({ method: "GET" })
-  .handler(async () => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await supabaseAdmin
-      .from("match_odds")
-      .select("match_id, odds_1, odds_x, odds_2, locked, snapshot_at");
-    return data ?? [];
-  });
+export const getOddsMap = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("match_odds")
+    .select("match_id, odds_1, odds_x, odds_2, locked, snapshot_at");
+  return data ?? [];
+});

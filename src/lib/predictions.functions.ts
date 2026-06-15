@@ -15,18 +15,16 @@ export const submitPrediction = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase
-      .from("predictions")
-      .upsert(
-        {
-          user_id: userId,
-          match_id: data.match_id,
-          pick: data.pick,
-          home_score: null,
-          away_score: null,
-        },
-        { onConflict: "user_id,match_id" },
-      );
+    const { error } = await supabase.from("predictions").upsert(
+      {
+        user_id: userId,
+        match_id: data.match_id,
+        pick: data.pick,
+        home_score: null,
+        away_score: null,
+      },
+      { onConflict: "user_id,match_id" },
+    );
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -77,5 +75,8 @@ export const getLeaderboard = createServerFn({ method: "GET" })
         };
         return { ...p, ...s, total: +s.total.toFixed(2) };
       })
-      .sort((a, b) => b.total - a.total || b.correct - a.correct || a.username.localeCompare(b.username));
+      .sort(
+        (a, b) =>
+          b.total - a.total || b.correct - a.correct || a.username.localeCompare(b.username),
+      );
   });
