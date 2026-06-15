@@ -218,7 +218,7 @@ function Dashboard() {
 
 function NextMatchHero({
   match,
-  hasPrediction,
+  prediction,
 }: {
   match: {
     id: string;
