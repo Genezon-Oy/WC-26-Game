@@ -98,7 +98,7 @@ function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Hero strip */}
-      <section className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/15 via-card/70 to-card/70 p-5 flex items-center justify-between gap-4">
+      <section className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/15 via-card/70 to-card/70 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           {data.userId && (
             <AvatarUpload
@@ -113,12 +113,12 @@ function Dashboard() {
             <div className="text-2xl font-bold">{data.myName} 👋</div>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-3 text-right">
-          <div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1.5 justify-end">
+        <div className="flex flex-col sm:items-end gap-3 w-full sm:w-auto">
+          <div className="flex sm:block justify-between items-center w-full">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1.5 sm:justify-end">
               <Trophy className="w-3.5 h-3.5" /> Safe Score
             </div>
-            <div className="text-xl font-bold tabular-nums text-primary">
+            <div className="text-xl font-bold tabular-nums text-primary text-right">
               {data.myRank ? `#${data.myRank}` : "—"}
               <span className="text-sm text-muted-foreground font-normal">
                 {" "}
@@ -126,11 +126,11 @@ function Dashboard() {
               </span>
             </div>
           </div>
-          <div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1.5 justify-end">
+          <div className="flex sm:block justify-between items-center w-full">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1.5 sm:justify-end">
               <TrendingUp className="w-3.5 h-3.5" /> Matrix
             </div>
-            <div className="text-xl font-bold tabular-nums text-accent">
+            <div className="text-xl font-bold tabular-nums text-accent text-right">
               {data.myMatrixRank ? `#${data.myMatrixRank}` : "—"}
               <span className="text-sm text-muted-foreground font-normal">
                 {" "}

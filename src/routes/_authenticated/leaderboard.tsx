@@ -30,8 +30,8 @@ function LeaderboardPage() {
           Matrix Bonus lisätään loppupisteisiin.
         </p>
       </div>
-      <div className="rounded-xl border border-border/60 bg-card/70 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="rounded-xl border border-border/60 bg-card/70 overflow-x-auto">
+        <table className="w-full text-sm min-w-[600px]">
           <thead className="text-xs uppercase text-muted-foreground bg-muted/30">
             <tr>
               <th className="text-left p-3 w-12">#</th>
@@ -87,8 +87,8 @@ function LeaderboardPage() {
           Scoreen (+28, +15, +7).
         </p>
       </div>
-      <div className="rounded-xl border border-border/60 bg-card/70 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="rounded-xl border border-border/60 bg-card/70 overflow-x-auto">
+        <table className="w-full text-sm min-w-[400px]">
           <thead className="text-xs uppercase text-muted-foreground bg-muted/30">
             <tr>
               <th className="text-left p-3 w-12">#</th>
