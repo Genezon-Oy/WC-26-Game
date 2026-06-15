@@ -39,15 +39,17 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
   const { data, isLoading } = useQuery({
     queryKey: ["sarjataulukko"],
     queryFn: async () => {
-      const [leaderboard, { data: matches }, { data: preds }] = await Promise.all([
-        fetchLeaderboard(),
-        supabase
-          .from("matches")
-          .select("id, kickoff_at, home_score, away_score")
-          .not("home_score", "is", null)
-          .order("kickoff_at", { ascending: true }),
-        supabase.from("predictions").select("user_id, match_id, points"),
-      ]);
+      const [leaderboard, { data: matches }, { data: preds }, { data: oddsData }] =
+        await Promise.all([
+          fetchLeaderboard(),
+          supabase
+            .from("matches")
+            .select("id, kickoff_at, home_score, away_score")
+            .not("home_score", "is", null)
+            .order("kickoff_at", { ascending: true }),
+          supabase.from("predictions").select("user_id, match_id, points, pick"),
+          supabase.from("match_odds").select("match_id, odds_1, odds_x, odds_2"),
+        ]);
 
       const finishedMatches = (matches ?? []).filter(
         (m) => m.home_score !== null && m.away_score !== null,
@@ -67,17 +69,31 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
       }
 
       // Per user, per day points
+      const oddsMap = new Map((oddsData ?? []).map((o) => [o.match_id, o]));
       const perDay = new Map<string, Map<string, number>>(); // userId -> day -> points
       for (const p of preds ?? []) {
         const day = matchDay.get(p.match_id);
         if (!day) continue; // unfinished match
+
         const pts = Number(p.points);
+        let matrixYield = 0;
+        if (pts > 0) {
+          const o = oddsMap.get(p.match_id);
+          let oddsVal = 0;
+          if (p.pick === "1") oddsVal = Number(o?.odds_1) || 0;
+          else if (p.pick === "X") oddsVal = Number(o?.odds_x) || 0;
+          else if (p.pick === "2") oddsVal = Number(o?.odds_2) || 0;
+          matrixYield = oddsVal * 0.5;
+        } else {
+          matrixYield = -1.0 * 0.5;
+        }
+
         let u = perDay.get(p.user_id);
         if (!u) {
           u = new Map();
           perDay.set(p.user_id, u);
         }
-        u.set(day, (u.get(day) ?? 0) + pts);
+        u.set(day, (u.get(day) ?? 0) + pts + matrixYield);
       }
 
       // Resolve avatar URLs
@@ -96,7 +112,7 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
             matrixBonus: p.matrix_bonus || 0,
           };
         })
-        .sort((a, b) => b.displayScore - a.displayScore || a.name.localeCompare(b.name));
+        .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
 
       // Build chart series: include starting "0" point + each finished day
       const chartDays = ["start", ...dayKeys];
@@ -295,10 +311,15 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
                         {p.displayScore.toFixed(2)} p
                       </span>
                     </div>
-                    {p.matrixBonus > 0 && (
-                      <div className="flex justify-between gap-4 items-center text-emerald-400 mt-1">
-                        <span>Matrix-bonus:</span>
-                        <span className="font-semibold tabular-nums">+{p.matrixBonus} p</span>
+                    {p.matrixBonus !== 0 && (
+                      <div
+                        className={`flex justify-between gap-4 items-center mt-1 ${p.matrixBonus > 0 ? "text-emerald-400" : "text-destructive"}`}
+                      >
+                        <span>Matrix-tuotto:</span>
+                        <span className="font-semibold tabular-nums">
+                          {p.matrixBonus > 0 ? "+" : ""}
+                          {p.matrixBonus.toFixed(2)} p
+                        </span>
                       </div>
                     )}
                     <div className="flex justify-between gap-4 items-center mt-1.5 pt-1.5 border-t border-border/40">

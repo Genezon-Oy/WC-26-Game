@@ -25,9 +25,9 @@ function LeaderboardPage() {
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Trophy className="text-primary w-6 h-6" /> Safe Score
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Oikea 1X2-veikkaus = kerroin pisteinä kerrottuna kierroksen kertoimella. Ennustuskohteet +
-          Matrix Bonus lisätään loppupisteisiin.
+        <p className="text-sm text-muted-foreground mt-2">
+          Oikea 1X2-veikkaus = kerroin kerrottuna kierroskertoimella. Ennustuskohteiden pisteet sekä
+          50% Matrix-tuotosta (Matrix Yield) lisätään reaaliajassa loppupisteisiin.
         </p>
       </div>
       <div className="rounded-xl border border-border/60 bg-card/70 overflow-x-auto">
@@ -38,7 +38,7 @@ function LeaderboardPage() {
               <th className="text-left p-3">Pelaaja</th>
               <th className="p-3 text-center">Oikein</th>
               <th className="p-3 text-right">Futures</th>
-              <th className="p-3 text-right">Matrix Bonus</th>
+              <th className="p-3 text-right">Matrix-tuotto</th>
               <th className="p-3 text-right">Yhteensä (Safe)</th>
             </tr>
           </thead>
@@ -61,7 +61,12 @@ function LeaderboardPage() {
                 <td className="p-3 text-right tabular-nums text-muted-foreground">
                   +{row.futures_score}
                 </td>
-                <td className="p-3 text-right tabular-nums text-accent">+{row.matrix_bonus}</td>
+                <td
+                  className={`p-3 text-right tabular-nums ${row.matrix_bonus > 0 ? "text-emerald-400" : row.matrix_bonus < 0 ? "text-red-400" : "text-muted-foreground"}`}
+                >
+                  {row.matrix_bonus > 0 ? "+" : ""}
+                  {row.matrix_bonus.toFixed(2)}
+                </td>
                 <td className="p-3 text-right font-bold tabular-nums text-lg">
                   {row.total.toFixed(2)}
                 </td>
@@ -82,9 +87,10 @@ function LeaderboardPage() {
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <TrendingUp className="text-accent w-6 h-6" /> Money Making Matrix
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Oikea 1X2-veikkaus = kerroin. Väärä = -1.0. Turnauksen lopussa Top 3 saa bonuksia Safe
-          Scoreen (+28, +15, +7).
+        <p className="text-sm text-muted-foreground mt-2">
+          Oikea 1X2-veikkaus = kerroin. Väärä = -1.0. Tämän taulukon pisteistä siirretään
+          automaattisesti 50% (Matrix Yield) yllä olevaan Safe Scoreen – niin hyvässä kuin
+          pahassakin!
         </p>
       </div>
       <div className="rounded-xl border border-border/60 bg-card/70 overflow-x-auto">

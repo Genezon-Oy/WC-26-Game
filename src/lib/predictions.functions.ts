@@ -126,14 +126,11 @@ export const getLeaderboard = createServerFn({ method: "GET" })
       stats.set(profile.id, cur);
     }
 
-    // 3. Determine Matrix Bonus
-    const sortedByMatrix = Array.from(stats.entries()).sort(
-      (a, b) => b[1].matrix_score - a[1].matrix_score,
-    );
+    // 3. Determine Matrix Bonus (50% Yield)
     const matrixBonusMap = new Map<string, number>();
-    if (sortedByMatrix.length > 0) matrixBonusMap.set(sortedByMatrix[0][0], 28);
-    if (sortedByMatrix.length > 1) matrixBonusMap.set(sortedByMatrix[1][0], 15);
-    if (sortedByMatrix.length > 2) matrixBonusMap.set(sortedByMatrix[2][0], 7);
+    for (const [userId, s] of stats.entries()) {
+      matrixBonusMap.set(userId, s.matrix_score * 0.5);
+    }
 
     // 4. Build final leaderboard
     return (profiles ?? [])
