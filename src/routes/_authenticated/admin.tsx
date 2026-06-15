@@ -12,6 +12,7 @@ import {
   adminPollLive,
   adminGetResults,
   adminSetResults,
+  adminSetHistoricalBet,
 } from "@/lib/admin.functions";
 import { adminRefreshOdds, adminLockKickoffOdds, adminSetManualOdds } from "@/lib/odds.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -417,6 +418,11 @@ function AdminPage() {
       </section>
 
       <ResultEntry setResult={setResult} qc={qc} />
+      <HistoricalBetEntry
+        setHistoricalBet={useServerFn(adminSetHistoricalBet)}
+        qc={qc}
+        users={users.data}
+      />
     </div>
   );
 }
@@ -593,6 +599,116 @@ function ResultEntry({
           disabled={!matchId || home === "" || away === "" || mut.isPending}
         >
           Tallenna
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+function HistoricalBetEntry({
+  setHistoricalBet,
+  qc,
+  users,
+}: {
+  setHistoricalBet: (args: {
+    data: { user_id: string; match_id: string; pick: "1" | "X" | "2" };
+  }) => Promise<unknown>;
+  qc: ReturnType<typeof useQueryClient>;
+  users?: { id: string; username: string; display_name: string }[];
+}) {
+  const matches = useQuery({
+    queryKey: ["admin-matches"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("matches")
+        .select("*")
+        .order("kickoff_at", { ascending: true })
+        .limit(200);
+      return data ?? [];
+    },
+  });
+
+  const [userId, setUserId] = useState("");
+  const [matchId, setMatchId] = useState("");
+  const [pick, setPick] = useState<"1" | "X" | "2" | "">("");
+
+  const mut = useMutation({
+    mutationFn: () =>
+      setHistoricalBet({
+        data: {
+          user_id: userId,
+          match_id: matchId,
+          pick: pick as "1" | "X" | "2",
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Menneisyyden veikkaus tallennettu ja pisteet laskettu!");
+      setMatchId("");
+      setPick("");
+      // Keep user selected for rapid data entry
+      qc.invalidateQueries();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <section className="rounded-2xl border border-border/60 bg-card/70 p-6 space-y-3">
+      <h2 className="font-semibold">Syötä menneisyyden veikkaus pelaajalle</h2>
+      <p className="text-xs text-muted-foreground">
+        Tällä työkalulla voit lisätä tai ylikirjoittaa minkä tahansa pelaajan veikkauksen, vaikka
+        ottelu olisi jo alkanut tai päättynyt. Jos ottelu on jo päättynyt, pisteet lasketaan
+        automaattisesti välittömästi.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-2 items-end">
+        <div className="space-y-1">
+          <Label>Pelaaja</Label>
+          <select
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+            className="w-full bg-input border border-border rounded-md px-2 py-2 text-sm"
+          >
+            <option value="">— valitse pelaaja —</option>
+            {users?.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.display_name} (@{u.username})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <Label>Ottelu</Label>
+          <select
+            value={matchId}
+            onChange={(e) => setMatchId(e.target.value)}
+            className="w-full bg-input border border-border rounded-md px-2 py-2 text-sm"
+          >
+            <option value="">— valitse ottelu —</option>
+            {matches.data?.map((m) => (
+              <option key={m.id} value={m.id}>
+                {new Date(m.kickoff_at).toLocaleDateString("fi-FI")} {flag(m.home_team)}{" "}
+                {m.home_team} – {m.away_team} {flag(m.away_team)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <Label>Veikkaus</Label>
+          <select
+            value={pick}
+            onChange={(e) => setPick(e.target.value as "1" | "X" | "2")}
+            className="w-24 bg-input border border-border rounded-md px-2 py-2 text-sm"
+          >
+            <option value="">—</option>
+            <option value="1">1</option>
+            <option value="X">X</option>
+            <option value="2">2</option>
+          </select>
+        </div>
+        <Button
+          onClick={() => mut.mutate()}
+          disabled={!userId || !matchId || !pick || mut.isPending}
+        >
+          {mut.isPending ? "Tallennetaan..." : "Tallenna"}
         </Button>
       </div>
     </section>
