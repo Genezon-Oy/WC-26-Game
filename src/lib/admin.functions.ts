@@ -193,7 +193,48 @@ export const adminSyncFixtures = createServerFn({ method: "POST" })
     return { teams: teams.length, matches: rows.length };
   });
 
-// ---- Admin: manually set a match result (and trigger rescore via DB trigger) ----
+// ---- Helper: recalculate prediction points for given match IDs ----
+async function rescorePredictions(matchIds: string[]) {
+  if (matchIds.length === 0) return;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const [{ data: matches }, { data: preds }, { data: odds }] = await Promise.all([
+    supabaseAdmin
+      .from("matches")
+      .select("id, home_score, away_score")
+      .in("id", matchIds)
+      .not("home_score", "is", null),
+    supabaseAdmin.from("predictions").select("id, match_id, pick").in("match_id", matchIds),
+    supabaseAdmin
+      .from("match_odds")
+      .select("match_id, odds_1, odds_x, odds_2")
+      .in("match_id", matchIds),
+  ]);
+
+  const matchMap = new Map((matches ?? []).map((m) => [m.id, m]));
+  const oddsMap = new Map((odds ?? []).map((o) => [o.match_id, o]));
+
+  for (const p of preds ?? []) {
+    const m = matchMap.get(p.match_id);
+    if (!m || m.home_score === null || m.away_score === null) continue;
+
+    const actual = m.home_score > m.away_score ? "1" : m.home_score === m.away_score ? "X" : "2";
+    const isCorrect = p.pick === actual;
+
+    let oddsValue = 0;
+    const o = oddsMap.get(p.match_id);
+    if (o) {
+      if (p.pick === "1") oddsValue = Number(o.odds_1) || 0;
+      else if (p.pick === "X") oddsValue = Number(o.odds_x) || 0;
+      else if (p.pick === "2") oddsValue = Number(o.odds_2) || 0;
+    }
+
+    const points = isCorrect ? oddsValue : 0;
+    await supabaseAdmin.from("predictions").update({ points }).eq("id", p.id);
+  }
+}
+
+// ---- Admin: manually set a match result + rescore predictions ----
 export const adminSetResult = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
@@ -234,6 +275,10 @@ export const adminSetResult = createServerFn({ method: "POST" })
       })
       .eq("id", data.match_id);
     if (error) throw new Error(error.message);
+
+    // Recalculate points for all predictions on this match
+    await rescorePredictions([data.match_id]);
+
     return { ok: true };
   });
 
@@ -322,6 +367,13 @@ export const adminPollLive = createServerFn({ method: "POST" })
 
     if (updatesToUpsert.length > 0) {
       await supabaseAdmin.from("matches").upsert(updatesToUpsert, { onConflict: "id" });
+
+      // Rescore predictions for all updated finished matches
+      const finishedIds = updatesToUpsert
+        .filter((u) => u.status === "finished" && u.home_score !== null)
+        .map((u) => u.id!)
+        .filter(Boolean);
+      await rescorePredictions(finishedIds);
     }
     return { ok: true, updated };
   });
