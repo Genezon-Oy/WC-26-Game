@@ -4,14 +4,11 @@
 // For user-authenticated queries (with RLS), use the auth middleware instead.
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
-import { getEvent } from '@tanstack/react-start/server';
+
 
 function createSupabaseAdminClient() {
-  const event = getEvent();
-  const env = event?.context?.cloudflare?.env || process.env;
-  
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || env.SUPABASE_URL;
-  const SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const SUPABASE_SERVICE_ROLE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     const missing = [

@@ -137,7 +137,7 @@ function findMatchingEvent(
 }
 
 async function snapshotOneMatch(matchId: string): Promise<{ ok: boolean; reason?: string; odds?: { odds_1: number; odds_x: number; odds_2: number } }> {
-  const apiKey = process.env.ODDS_API_KEY;
+  const apiKey = import.meta.env.VITE_ODDS_API_KEY || process.env.ODDS_API_KEY;
   if (!apiKey) return { ok: false, reason: "ODDS_API_KEY not configured" };
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -192,7 +192,7 @@ export const adminRefreshOdds = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.userId);
-    const apiKey = process.env.ODDS_API_KEY;
+    const apiKey = import.meta.env.VITE_ODDS_API_KEY || process.env.ODDS_API_KEY;
     if (!apiKey) {
       return { updated: 0, failed: 0, errors: ["ODDS_API_KEY not configured"] };
     }

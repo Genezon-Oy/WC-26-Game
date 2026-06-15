@@ -200,7 +200,7 @@ export const adminPollLive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.userId);
-    const apiKey = process.env.FOOTBALL_DATA_API_KEY;
+    const apiKey = import.meta.env.VITE_FOOTBALL_DATA_API_KEY || process.env.FOOTBALL_DATA_API_KEY;
     if (!apiKey) {
       return { ok: false, error: "FOOTBALL_DATA_API_KEY not set" };
     }
