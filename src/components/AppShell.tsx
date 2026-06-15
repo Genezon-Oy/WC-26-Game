@@ -59,7 +59,18 @@ export function AppShell({ children }: { children: ReactNode }) {
       const { data } = await supabase.auth.getUser();
       if (!active || !data.user) return;
       const meta = data.user.user_metadata as { display_name?: string; username?: string };
-      setDisplayName(meta.display_name || meta.username || data.user.email || "Pelaaja");
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("id", data.user.id)
+        .maybeSingle();
+      setDisplayName(
+        profile?.display_name ||
+          meta.display_name ||
+          meta.username ||
+          data.user.email?.split("@")[0] ||
+          "Pelaaja",
+      );
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")

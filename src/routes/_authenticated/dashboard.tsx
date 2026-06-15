@@ -73,6 +73,13 @@ function Dashboard() {
       const todayUnpredicted = upcomingList.filter(
         (m) => new Date(m.kickoff_at) <= todayEnd && !preds.has(m.id),
       );
+      const profileData = myProfile.data as {
+        avatar_url: string | null;
+        display_name: string | null;
+      } | null;
+      const finalName =
+        profileData?.display_name || meta.display_name || meta.username || "Pelaaja";
+
       return {
         upcomingList,
         nextMatch,
@@ -84,8 +91,8 @@ function Dashboard() {
         myMatrixRank,
         myMatrixScore,
         userId,
-        myName,
-        myAvatarPath: (myProfile.data as { avatar_url: string | null } | null)?.avatar_url ?? null,
+        myName: finalName,
+        myAvatarPath: profileData?.avatar_url ?? null,
       };
     },
   });
