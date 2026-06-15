@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { LogOut, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
 
 const NAV = [
   { to: "/dashboard", label: "Koti" },
@@ -17,6 +18,7 @@ const NAV = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const qc = useQueryClient();
   const matches = useRouterState({ select: (s) => s.location.pathname });
   const [displayName, setDisplayName] = useState<string>("");
   const [isAdmin, setIsAdmin] = useState(false);
@@ -41,6 +43,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    qc.clear();
     router.navigate({ to: "/auth" });
   }
 
