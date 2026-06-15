@@ -21,12 +21,12 @@ import {
 } from "@/components/ui/tooltip";
 
 const LINE_COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--accent))",
-  "hsl(160 70% 55%)",
-  "hsl(330 75% 60%)",
-  "hsl(40 90% 60%)",
-  "hsl(260 75% 65%)",
+  "oklch(var(--chart-1))",
+  "oklch(var(--chart-2))",
+  "oklch(var(--chart-3))",
+  "oklch(var(--chart-4))",
+  "oklch(var(--chart-5))",
+  "oklch(var(--primary))",
 ];
 
 function fiDay(d: Date) {
@@ -164,21 +164,21 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
               </defs>
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="hsl(var(--border))"
-                opacity={0.3}
+                stroke="oklch(var(--border))"
+                opacity={0.6}
                 vertical={false}
               />
               <XAxis
                 dataKey="day"
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={11}
+                stroke="oklch(var(--muted-foreground))"
+                fontSize={12}
                 tickLine={false}
                 axisLine={false}
                 dy={10}
               />
               <YAxis
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={11}
+                stroke="oklch(var(--muted-foreground))"
+                fontSize={12}
                 tickLine={false}
                 axisLine={false}
                 allowDecimals
@@ -234,8 +234,8 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
                   stroke={colorFor(i)}
                   fillOpacity={1}
                   fill={`url(#color${p.id})`}
-                  strokeWidth={p.id === currentUserId ? 3 : 2}
-                  activeDot={{ r: 5, strokeWidth: 0, fill: colorFor(i) }}
+                  strokeWidth={p.id === currentUserId ? 4 : 3}
+                  activeDot={{ r: 6, strokeWidth: 0, fill: colorFor(i) }}
                   isAnimationActive
                 />
               ))}
