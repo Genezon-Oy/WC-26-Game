@@ -21,12 +21,12 @@ import {
 } from "@/components/ui/tooltip";
 
 const LINE_COLORS = [
-  "oklch(var(--chart-1))",
-  "oklch(var(--chart-2))",
-  "oklch(var(--chart-3))",
-  "oklch(var(--chart-4))",
-  "oklch(var(--chart-5))",
-  "oklch(var(--primary))",
+  "#3b82f6", // blue-500
+  "#ec4899", // pink-500
+  "#22c55e", // green-500
+  "#eab308", // yellow-500
+  "#8b5cf6", // violet-500
+  "#f97316", // orange-500
 ];
 
 function fiDay(d: Date) {
@@ -164,20 +164,20 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
               </defs>
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="oklch(var(--border))"
+                stroke="#334155"
                 opacity={0.6}
                 vertical={false}
               />
               <XAxis
                 dataKey="day"
-                stroke="oklch(var(--muted-foreground))"
+                stroke="#64748b"
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
                 dy={10}
               />
               <YAxis
-                stroke="oklch(var(--muted-foreground))"
+                stroke="#64748b"
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
@@ -257,7 +257,7 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
             >
               <span className="w-6 text-center text-sm font-bold tabular-nums">
                 {i === 0 ? (
-                  <Crown className="w-5 h-5 text-accent inline drop-shadow-md" />
+                  <Crown className="w-5 h-5 text-yellow-500 inline drop-shadow-md" />
                 ) : i < 3 ? (
                   <Medal
                     className={`w-5 h-5 inline ${i === 1 ? "text-zinc-300" : "text-amber-600"}`}
