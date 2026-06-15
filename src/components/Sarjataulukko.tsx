@@ -13,6 +13,12 @@ import {
 } from "recharts";
 import { AvatarView, resolveAvatarUrls } from "@/components/AvatarUpload";
 import { Trophy, Medal, Crown } from "lucide-react";
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const LINE_COLORS = [
   "hsl(var(--primary))",
@@ -78,13 +84,19 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
       const urls = await resolveAvatarUrls(leaderboard.map((p) => p.avatar_url));
 
       // Rank
-      const ranked = leaderboard.map((p, i) => ({
-        id: p.id,
-        name: p.display_name || p.username || "Pelaaja",
-        avatar: urls[i] ?? null,
-        total: p.total, // Exact leaderboard total (includes Matrix/Futures)
-        basePoints: p.safe_score_raw,
-      }));
+      const ranked = leaderboard
+        .map((p, i) => {
+          const displayScore = p.total - (p.matrix_bonus || 0);
+          return {
+            id: p.id,
+            name: p.display_name || p.username || "Pelaaja",
+            avatar: urls[i] ?? null,
+            total: p.total, // Exact leaderboard total
+            displayScore, // Score without matrix bonus
+            matrixBonus: p.matrix_bonus || 0,
+          };
+        })
+        .sort((a, b) => b.displayScore - a.displayScore || a.name.localeCompare(b.name));
 
       // Build chart series: include starting "0" point + each finished day
       const chartDays = ["start", ...dayKeys];
@@ -233,47 +245,74 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
       )}
 
       <div className="grid grid-cols-1 gap-1.5 pt-2">
-        {data.ranked.map((p, i) => (
-          <div
-            key={p.id}
-            className={`group flex items-center gap-4 rounded-xl px-4 py-2.5 transition-all duration-300 ${
-              p.id === currentUserId
-                ? "bg-primary/10 border border-primary/20 shadow-sm"
-                : "hover:bg-muted/40 border border-transparent hover:border-border/50"
-            }`}
-          >
-            <span className="w-6 text-center text-sm font-bold tabular-nums">
-              {i === 0 ? (
-                <Crown className="w-5 h-5 text-accent inline drop-shadow-md" />
-              ) : i < 3 ? (
-                <Medal
-                  className={`w-5 h-5 inline ${i === 1 ? "text-zinc-300" : "text-amber-600"}`}
-                />
-              ) : (
-                <span className="text-muted-foreground group-hover:text-foreground transition-colors">
-                  {i + 1}
-                </span>
-              )}
-            </span>
-            <span
-              className="w-1.5 h-8 rounded-full opacity-80 group-hover:opacity-100 transition-opacity shadow-sm"
-              style={{ background: colorFor(i) }}
-              aria-hidden
-            />
-            <AvatarView name={p.name} url={p.avatar} size={36} />
-            <span className="flex-1 font-semibold text-foreground truncate">{p.name}</span>
-            <div className="flex flex-col items-end">
-              <span className="font-bold text-lg tabular-nums leading-none tracking-tight">
-                {p.total.toFixed(2)}
+        <TooltipProvider delayDuration={150}>
+          {data.ranked.map((p, i) => (
+            <div
+              key={p.id}
+              className={`group flex items-center gap-4 rounded-xl px-4 py-2.5 transition-all duration-300 ${
+                p.id === currentUserId
+                  ? "bg-primary/10 border border-primary/20 shadow-sm"
+                  : "hover:bg-muted/40 border border-transparent hover:border-border/50"
+              }`}
+            >
+              <span className="w-6 text-center text-sm font-bold tabular-nums">
+                {i === 0 ? (
+                  <Crown className="w-5 h-5 text-accent inline drop-shadow-md" />
+                ) : i < 3 ? (
+                  <Medal
+                    className={`w-5 h-5 inline ${i === 1 ? "text-zinc-300" : "text-amber-600"}`}
+                  />
+                ) : (
+                  <span className="text-muted-foreground group-hover:text-foreground transition-colors">
+                    {i + 1}
+                  </span>
+                )}
               </span>
-              {p.total !== p.basePoints && (
-                <span className="text-[10px] text-muted-foreground uppercase font-semibold mt-0.5">
-                  Sis. bonukset
-                </span>
-              )}
+              <span
+                className="w-1.5 h-8 rounded-full opacity-80 group-hover:opacity-100 transition-opacity shadow-sm"
+                style={{ background: colorFor(i) }}
+                aria-hidden
+              />
+              <AvatarView name={p.name} url={p.avatar} size={36} />
+              <span className="flex-1 font-semibold text-foreground truncate">{p.name}</span>
+              <div className="flex flex-col items-end">
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <span className="font-bold text-lg tabular-nums leading-none tracking-tight cursor-help border-b border-dashed border-muted-foreground/40 pb-0.5">
+                      {p.displayScore.toFixed(2)}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="top"
+                    className="bg-card/95 backdrop-blur-md border border-border/50 shadow-xl"
+                  >
+                    <div className="font-semibold mb-1.5 text-[11px] uppercase tracking-wider text-muted-foreground border-b border-border/40 pb-1.5">
+                      True Score
+                    </div>
+                    <div className="flex justify-between gap-4 items-center">
+                      <span className="text-muted-foreground">Ottelut + Futures:</span>
+                      <span className="font-bold tabular-nums text-foreground">
+                        {p.displayScore.toFixed(2)} p
+                      </span>
+                    </div>
+                    {p.matrixBonus > 0 && (
+                      <div className="flex justify-between gap-4 items-center text-accent mt-1">
+                        <span>Matrix-bonus:</span>
+                        <span className="font-semibold tabular-nums">+{p.matrixBonus} p</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between gap-4 items-center mt-1.5 pt-1.5 border-t border-border/40">
+                      <span className="font-bold">Yhteensä:</span>
+                      <span className="font-bold tabular-nums text-primary text-sm">
+                        {p.total.toFixed(2)} p
+                      </span>
+                    </div>
+                  </TooltipContent>
+                </UITooltip>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </TooltipProvider>
         {data.ranked.length === 0 && (
           <div className="text-sm text-muted-foreground py-6 text-center">Ei pelaajia vielä.</div>
         )}
