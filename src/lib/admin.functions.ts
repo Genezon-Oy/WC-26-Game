@@ -417,7 +417,7 @@ export const adminSetHistoricalBet = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     // Only admins can do this
-    if (!context.isAdmin) throw new Error("Vain ylläpitäjä voi lisätä menneitä veikkauksia!");
+    await assertAdmin(context.userId);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
