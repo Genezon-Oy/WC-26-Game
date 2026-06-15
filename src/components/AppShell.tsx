@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 const NAV = [
   { to: "/dashboard", label: "Koti" },
   { to: "/fixtures", label: "Ottelut" },
+  { to: "/results", label: "Tulokset" },
   { to: "/groups", label: "Lohkot" },
   { to: "/teams", label: "Joukkueet" },
   { to: "/veikkaa", label: "Veikkaa" },

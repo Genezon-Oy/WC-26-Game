@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedTeamsRouteImport } from './routes/_authenticated/teams'
+import { Route as AuthenticatedResultsRouteImport } from './routes/_authenticated/results'
 import { Route as AuthenticatedPredictionsRouteImport } from './routes/_authenticated/predictions'
 import { Route as AuthenticatedLeaderboardRouteImport } from './routes/_authenticated/leaderboard'
 import { Route as AuthenticatedGroupsRouteImport } from './routes/_authenticated/groups'
@@ -44,6 +45,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
 const AuthenticatedTeamsRoute = AuthenticatedTeamsRouteImport.update({
   id: '/teams',
   path: '/teams',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedResultsRoute = AuthenticatedResultsRouteImport.update({
+  id: '/results',
+  path: '/results',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPredictionsRoute =
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/groups': typeof AuthenticatedGroupsRoute
   '/leaderboard': typeof AuthenticatedLeaderboardRoute
   '/predictions': typeof AuthenticatedPredictionsRoute
+  '/results': typeof AuthenticatedResultsRoute
   '/teams': typeof AuthenticatedTeamsRouteWithChildren
   '/fixtures/$matchId': typeof AuthenticatedFixturesMatchIdRoute
   '/teams/$team': typeof AuthenticatedTeamsTeamRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/groups': typeof AuthenticatedGroupsRoute
   '/leaderboard': typeof AuthenticatedLeaderboardRoute
   '/predictions': typeof AuthenticatedPredictionsRoute
+  '/results': typeof AuthenticatedResultsRoute
   '/teams': typeof AuthenticatedTeamsRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
   '/fixtures/$matchId': typeof AuthenticatedFixturesMatchIdRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/_authenticated/groups': typeof AuthenticatedGroupsRoute
   '/_authenticated/leaderboard': typeof AuthenticatedLeaderboardRoute
   '/_authenticated/predictions': typeof AuthenticatedPredictionsRoute
+  '/_authenticated/results': typeof AuthenticatedResultsRoute
   '/_authenticated/teams': typeof AuthenticatedTeamsRouteWithChildren
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/fixtures/$matchId': typeof AuthenticatedFixturesMatchIdRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/groups'
     | '/leaderboard'
     | '/predictions'
+    | '/results'
     | '/teams'
     | '/fixtures/$matchId'
     | '/teams/$team'
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
     | '/groups'
     | '/leaderboard'
     | '/predictions'
+    | '/results'
     | '/teams'
     | '/'
     | '/fixtures/$matchId'
@@ -220,6 +231,7 @@ export interface FileRouteTypes {
     | '/_authenticated/groups'
     | '/_authenticated/leaderboard'
     | '/_authenticated/predictions'
+    | '/_authenticated/results'
     | '/_authenticated/teams'
     | '/_authenticated/'
     | '/_authenticated/fixtures/$matchId'
@@ -264,6 +276,13 @@ declare module '@tanstack/react-router' {
       path: '/teams'
       fullPath: '/teams'
       preLoaderRoute: typeof AuthenticatedTeamsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/results': {
+      id: '/_authenticated/results'
+      path: '/results'
+      fullPath: '/results'
+      preLoaderRoute: typeof AuthenticatedResultsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/predictions': {
@@ -394,6 +413,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedGroupsRoute: typeof AuthenticatedGroupsRoute
   AuthenticatedLeaderboardRoute: typeof AuthenticatedLeaderboardRoute
   AuthenticatedPredictionsRoute: typeof AuthenticatedPredictionsRoute
+  AuthenticatedResultsRoute: typeof AuthenticatedResultsRoute
   AuthenticatedTeamsRoute: typeof AuthenticatedTeamsRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedVeikkaaMatchIdRoute: typeof AuthenticatedVeikkaaMatchIdRoute
@@ -408,6 +428,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedGroupsRoute: AuthenticatedGroupsRoute,
   AuthenticatedLeaderboardRoute: AuthenticatedLeaderboardRoute,
   AuthenticatedPredictionsRoute: AuthenticatedPredictionsRoute,
+  AuthenticatedResultsRoute: AuthenticatedResultsRoute,
   AuthenticatedTeamsRoute: AuthenticatedTeamsRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedVeikkaaMatchIdRoute: AuthenticatedVeikkaaMatchIdRoute,

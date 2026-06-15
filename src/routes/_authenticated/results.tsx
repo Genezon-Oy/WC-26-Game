@@ -12,23 +12,22 @@ import {
 type FixtureRow = MatchCardData & { stage: string };
 import { Input } from "@/components/ui/input";
 
-export const Route = createFileRoute("/_authenticated/fixtures/")({
-  component: FixturesPage,
+export const Route = createFileRoute("/_authenticated/results")({
+  component: ResultsPage,
 });
 
-function FixturesPage() {
+function ResultsPage() {
   const [search, setSearch] = useState("");
   const [stage, setStage] = useState<string>("all");
 
   const { data: matches, isLoading } = useQuery({
-    queryKey: ["matches", "upcoming"],
+    queryKey: ["matches", "finished"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("matches")
         .select("*")
-        .is("home_score", null)
-        .order("kickoff_at", { ascending: true })
-        .limit(200);
+        .not("home_score", "is", null)
+        .order("kickoff_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as FixtureRow[];
     },
@@ -75,7 +74,7 @@ function FixturesPage() {
     });
   }, [matches, search, stage]);
 
-  // group by date
+  // group by date (newest first)
   const grouped = useMemo(() => {
     const byDate = new Map<string, FixtureRow[]>();
     for (const m of filtered) {
@@ -92,47 +91,44 @@ function FixturesPage() {
     return Array.from(byDate.entries());
   }, [filtered]);
 
+  const stageLabels: Record<string, string> = {
+    all: "Kaikki vaiheet",
+    group: "Lohkovaihe",
+    "round-of-32": "32 parasta",
+    "round-of-16": "16 parasta",
+    "quarter-final": "Puolivälierät",
+    "semi-final": "Välierät",
+    "third-place": "Pronssiottelu",
+    final: "Finaali",
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold mb-1">Ottelut</h1>
-        <p className="text-sm text-muted-foreground">Tulevat MM-kisojen 2026 ottelut.</p>
+        <h1 className="text-2xl font-bold mb-1">Tulokset</h1>
+        <p className="text-sm text-muted-foreground">Pelatut ottelut ja lopputulokset.</p>
       </div>
       <div className="flex flex-col sm:flex-row gap-3">
         <Input value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
         <div className="flex flex-wrap gap-1.5">
-          {stages.map((s) => {
-            const labels: Record<string, string> = {
-              all: "Kaikki vaiheet",
-              group: "Lohkovaihe",
-              "round-of-32": "32 parasta",
-              "round-of-16": "16 parasta",
-              "quarter-final": "Puolivälierät",
-              "semi-final": "Välierät",
-              "third-place": "Pronssiottelu",
-              final: "Finaali",
-            };
-            return (
-              <button
-                key={s}
-                onClick={() => setStage(s)}
-                className={`px-3 py-1.5 text-xs rounded-md border ${
-                  stage === s
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {labels[s] ?? s.replace(/-/g, " ")}
-              </button>
-            );
-          })}
+          {stages.map((s) => (
+            <button
+              key={s}
+              onClick={() => setStage(s)}
+              className={`px-3 py-1.5 text-xs rounded-md border ${
+                stage === s
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {stageLabels[s] ?? s.replace(/-/g, " ")}
+            </button>
+          ))}
         </div>
       </div>
       {isLoading && <p className="text-muted-foreground">Ladataan…</p>}
       {!isLoading && grouped.length === 0 && (
-        <p className="text-muted-foreground">
-          Ei tulevia otteluita. (Jos lista on tyhjä, pyydä ylläpitäjää synkronoimaan ottelut.)
-        </p>
+        <p className="text-muted-foreground">Ei vielä pelattuja otteluita.</p>
       )}
       {grouped.map(([day, list]) => (
         <section key={day}>
