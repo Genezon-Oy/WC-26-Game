@@ -30,7 +30,7 @@ function Dashboard() {
           .select("*")
           .gte("kickoff_at", nowIso)
           .order("kickoff_at", { ascending: true })
-          .limit(10),
+          .limit(15),
         supabase.from("matches").select("*").eq("status", "live"),
         userId
           ? supabase.from("predictions").select("*").eq("user_id", userId)
@@ -74,6 +74,7 @@ function Dashboard() {
         (m) => new Date(m.kickoff_at) <= todayEnd && !preds.has(m.id),
       );
       return {
+        upcomingList,
         nextMatch,
         todayUnpredicted,
         live: live.data ?? [],
@@ -177,6 +178,25 @@ function Dashboard() {
           match={data.nextMatch}
           hasPrediction={data.predictions.has(data.nextMatch.id)}
         />
+      )}
+
+      {/* Upcoming matches */}
+      {data.upcomingList.length > 1 && (
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2">
+              Seuraavat ottelut
+            </h2>
+            <Link to="/fixtures" className="text-xs text-primary hover:underline">
+              Kaikki ottelut →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {data.upcomingList.slice(1, 7).map((m) => (
+              <MatchCard key={m.id} match={m} prediction={data.predictions.get(m.id)} />
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Today unpredicted nudge */}

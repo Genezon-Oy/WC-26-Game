@@ -68,9 +68,7 @@ function VeikkaaIndex() {
         >
           {data.unpredicted.length > 0 ? "💡 Vinkki: Veikkauksia tekemättä" : "Veikkaamatta"}
         </div>
-        <div
-          className={`text-5xl font-bold tabular-nums mt-2 text-primary`}
-        >
+        <div className={`text-5xl font-bold tabular-nums mt-2 text-primary`}>
           {data.unpredicted.length}
         </div>
         <div className="text-sm text-muted-foreground mt-1">tulevaa ottelua</div>
