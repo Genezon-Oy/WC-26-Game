@@ -61,15 +61,15 @@ function VeikkaaIndex() {
       </div>
 
       <div
-        className={`rounded-2xl border p-6 text-center transition-colors ${data.unpredicted.length > 0 ? "border-accent/60 bg-gradient-to-br from-accent/20 via-accent/5 to-card" : "border-border/60 bg-gradient-to-br from-primary/15 via-card/70 to-card/70"}`}
+        className={`rounded-2xl border p-6 text-center transition-colors ${data.unpredicted.length > 0 ? "border-primary/60 bg-gradient-to-br from-primary/20 via-primary/5 to-card" : "border-border/60 bg-gradient-to-br from-primary/15 via-card/70 to-card/70"}`}
       >
         <div
-          className={`text-xs uppercase tracking-wider font-bold ${data.unpredicted.length > 0 ? "text-accent" : "text-muted-foreground"}`}
+          className={`text-xs uppercase tracking-wider font-bold ${data.unpredicted.length > 0 ? "text-primary" : "text-muted-foreground"}`}
         >
           {data.unpredicted.length > 0 ? "💡 Vinkki: Veikkauksia tekemättä" : "Veikkaamatta"}
         </div>
         <div
-          className={`text-5xl font-bold tabular-nums mt-2 ${data.unpredicted.length > 0 ? "text-accent" : "text-primary"}`}
+          className={`text-5xl font-bold tabular-nums mt-2 text-primary`}
         >
           {data.unpredicted.length}
         </div>
@@ -77,14 +77,14 @@ function VeikkaaIndex() {
 
         {data.unpredicted.length > 0 && (
           <p className="mt-3 text-sm text-muted-foreground">
-            Voit rauhassa muokata veikkauksiasi aina kunkin ottelun alkupotkuun saakka. Ei haittaa vaikka unohtaisit!
+            Voit rauhassa muokata veikkauksiasi aina kunkin ottelun alkupotkuun saakka.
           </p>
         )}
 
         {next ? (
           <Button
             size="lg"
-            className={`mt-5 ${data.unpredicted.length > 0 ? "bg-accent text-accent-foreground hover:bg-accent/90" : ""}`}
+            className={`mt-5 ${data.unpredicted.length > 0 ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}`}
             onClick={() => navigate({ to: "/veikkaa/$matchId", params: { matchId: next.id } })}
           >
             {data.unpredicted.length > 0 ? "Tee veikkauksia" : "Selaa veikkauksia"}
