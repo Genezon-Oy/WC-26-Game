@@ -402,3 +402,40 @@ export const adminPollLive = createServerFn({ method: "POST" })
     }
     return { ok: true, updated };
   });
+
+// ---- Admin: manually insert a historical bet for a user ----
+export const adminSetHistoricalBet = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        user_id: z.string().uuid(),
+        match_id: z.string().uuid(),
+        pick: z.enum(["1", "X", "2"]),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    // Only admins can do this
+    if (!context.isAdmin) throw new Error("Vain ylläpitäjä voi lisätä menneitä veikkauksia!");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Upsert the prediction bypassing RLS
+    const { error } = await supabaseAdmin.from("predictions").upsert(
+      {
+        user_id: data.user_id,
+        match_id: data.match_id,
+        pick: data.pick,
+        points: 0, // Will be recalculated immediately if match has ended
+      },
+      { onConflict: "user_id, match_id" },
+    );
+
+    if (error) throw new Error(error.message);
+
+    // Trigger recalculation for this match immediately
+    await rescorePredictions([data.match_id]);
+
+    return { ok: true };
+  });
