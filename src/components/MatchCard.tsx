@@ -97,7 +97,7 @@ export function MatchCard({
                 <span
                   className={`px-1.5 py-0.5 rounded font-semibold ${
                     prediction.points > 0
-                      ? "bg-accent/20 text-accent"
+                      ? "bg-emerald-500/20 text-emerald-500 dark:bg-emerald-500/30 dark:text-emerald-400"
                       : "bg-muted text-muted-foreground"
                   }`}
                 >

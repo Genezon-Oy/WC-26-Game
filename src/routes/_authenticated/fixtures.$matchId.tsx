@@ -103,7 +103,9 @@ function MatchDetail() {
               Veikkasit{" "}
               <span className="font-bold text-foreground tabular-nums">{data.my.pick ?? "—"}</span>
               {finished && (
-                <span className="text-primary font-semibold ml-2">
+                <span
+                  className={`font-semibold ml-2 ${Number(data.my.points) > 0 ? "text-emerald-500 dark:text-emerald-400" : "text-muted-foreground"}`}
+                >
                   +{Number(data.my.points).toFixed(2)} p
                 </span>
               )}
@@ -150,11 +152,15 @@ function MatchDetail() {
                     <li key={p.id} className="flex items-center justify-between py-2 text-sm">
                       <span>{profile?.display_name ?? "Pelaaja"}</span>
                       <span className="tabular-nums">
-                        <span className={`font-semibold ${correct ? "text-accent" : ""}`}>
+                        <span
+                          className={`font-semibold ${correct ? "text-emerald-500 dark:text-emerald-400" : ""}`}
+                        >
                           {p.pick ?? "—"}
                         </span>
                         {finished && (
-                          <span className="ml-3 text-primary font-semibold">
+                          <span
+                            className={`ml-3 font-semibold ${correct ? "text-emerald-500 dark:text-emerald-400" : "text-muted-foreground"}`}
+                          >
                             +{Number(p.points).toFixed(2)}
                           </span>
                         )}
