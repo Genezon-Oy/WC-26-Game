@@ -28,6 +28,7 @@ const NAV = [
   { to: "/veikkaa", label: "Veikkaa" },
   { to: "/futures", label: "Futures" },
   { to: "/leaderboard", label: "Tulostaulu" },
+  { to: "/saannot", label: "Säännöt" },
 ] as const;
 
 // Icons for the bottom mobile bar
