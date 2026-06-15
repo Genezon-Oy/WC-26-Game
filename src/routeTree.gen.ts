@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedTeamsRouteImport } from './routes/_authenticated/teams'
+import { Route as AuthenticatedSaannotRouteImport } from './routes/_authenticated/saannot'
 import { Route as AuthenticatedResultsRouteImport } from './routes/_authenticated/results'
 import { Route as AuthenticatedPredictionsRouteImport } from './routes/_authenticated/predictions'
 import { Route as AuthenticatedLeaderboardRouteImport } from './routes/_authenticated/leaderboard'
@@ -45,6 +46,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
 const AuthenticatedTeamsRoute = AuthenticatedTeamsRouteImport.update({
   id: '/teams',
   path: '/teams',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSaannotRoute = AuthenticatedSaannotRouteImport.update({
+  id: '/saannot',
+  path: '/saannot',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedResultsRoute = AuthenticatedResultsRouteImport.update({
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/leaderboard': typeof AuthenticatedLeaderboardRoute
   '/predictions': typeof AuthenticatedPredictionsRoute
   '/results': typeof AuthenticatedResultsRoute
+  '/saannot': typeof AuthenticatedSaannotRoute
   '/teams': typeof AuthenticatedTeamsRouteWithChildren
   '/fixtures/$matchId': typeof AuthenticatedFixturesMatchIdRoute
   '/teams/$team': typeof AuthenticatedTeamsTeamRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/leaderboard': typeof AuthenticatedLeaderboardRoute
   '/predictions': typeof AuthenticatedPredictionsRoute
   '/results': typeof AuthenticatedResultsRoute
+  '/saannot': typeof AuthenticatedSaannotRoute
   '/teams': typeof AuthenticatedTeamsRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
   '/fixtures/$matchId': typeof AuthenticatedFixturesMatchIdRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/_authenticated/leaderboard': typeof AuthenticatedLeaderboardRoute
   '/_authenticated/predictions': typeof AuthenticatedPredictionsRoute
   '/_authenticated/results': typeof AuthenticatedResultsRoute
+  '/_authenticated/saannot': typeof AuthenticatedSaannotRoute
   '/_authenticated/teams': typeof AuthenticatedTeamsRouteWithChildren
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/fixtures/$matchId': typeof AuthenticatedFixturesMatchIdRoute
@@ -195,6 +204,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/predictions'
     | '/results'
+    | '/saannot'
     | '/teams'
     | '/fixtures/$matchId'
     | '/teams/$team'
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/predictions'
     | '/results'
+    | '/saannot'
     | '/teams'
     | '/'
     | '/fixtures/$matchId'
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '/_authenticated/leaderboard'
     | '/_authenticated/predictions'
     | '/_authenticated/results'
+    | '/_authenticated/saannot'
     | '/_authenticated/teams'
     | '/_authenticated/'
     | '/_authenticated/fixtures/$matchId'
@@ -276,6 +288,13 @@ declare module '@tanstack/react-router' {
       path: '/teams'
       fullPath: '/teams'
       preLoaderRoute: typeof AuthenticatedTeamsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/saannot': {
+      id: '/_authenticated/saannot'
+      path: '/saannot'
+      fullPath: '/saannot'
+      preLoaderRoute: typeof AuthenticatedSaannotRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/results': {
@@ -414,6 +433,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedLeaderboardRoute: typeof AuthenticatedLeaderboardRoute
   AuthenticatedPredictionsRoute: typeof AuthenticatedPredictionsRoute
   AuthenticatedResultsRoute: typeof AuthenticatedResultsRoute
+  AuthenticatedSaannotRoute: typeof AuthenticatedSaannotRoute
   AuthenticatedTeamsRoute: typeof AuthenticatedTeamsRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedVeikkaaMatchIdRoute: typeof AuthenticatedVeikkaaMatchIdRoute
@@ -429,6 +449,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedLeaderboardRoute: AuthenticatedLeaderboardRoute,
   AuthenticatedPredictionsRoute: AuthenticatedPredictionsRoute,
   AuthenticatedResultsRoute: AuthenticatedResultsRoute,
+  AuthenticatedSaannotRoute: AuthenticatedSaannotRoute,
   AuthenticatedTeamsRoute: AuthenticatedTeamsRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedVeikkaaMatchIdRoute: AuthenticatedVeikkaaMatchIdRoute,
@@ -446,3 +467,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

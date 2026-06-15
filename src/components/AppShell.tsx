@@ -13,6 +13,7 @@ import {
   Users,
   LayoutGrid,
   CheckSquare,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -43,6 +44,7 @@ const MORE_TABS = [
   { to: "/groups", label: "Lohkot", icon: LayoutGrid },
   { to: "/teams", label: "Joukkueet", icon: Users },
   { to: "/futures", label: "Futures", icon: PenLine },
+  { to: "/saannot", label: "Säännöt", icon: BookOpen },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
