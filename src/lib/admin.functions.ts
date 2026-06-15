@@ -23,6 +23,45 @@ function usernameToEmail(username: string): string {
   return `${username.trim().toLowerCase()}@league.local`;
 }
 
+export const adminGetResults = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("tournament_results")
+      .select("*")
+      .eq("id", 1)
+      .maybeSingle();
+    return data;
+  });
+
+export const adminSetResults = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        winner: z.string().optional(),
+        golden_boot: z.string().optional(),
+        most_assists: z.string().optional(),
+        semi_finalists: z.array(z.string()).max(4).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("tournament_results").upsert({
+      id: 1,
+      winner: data.winner ?? null,
+      golden_boot: data.golden_boot ?? null,
+      most_assists: data.most_assists ?? null,
+      semi_finalists: data.semi_finalists ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 // ---- Admin: create user (synthetic email from username) ----
 export const adminCreateUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -240,7 +279,7 @@ export const adminPollLive = createServerFn({ method: "POST" })
       return { ok: true, updated: 0 };
     }
 
-    const updatesToUpsert: any[] = [];
+    const updatesToUpsert: Record<string, unknown>[] = [];
     let updated = 0;
 
     for (const m of json.matches ?? []) {

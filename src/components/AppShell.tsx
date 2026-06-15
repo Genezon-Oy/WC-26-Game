@@ -10,6 +10,7 @@ const NAV = [
   { to: "/groups", label: "Lohkot" },
   { to: "/teams", label: "Joukkueet" },
   { to: "/veikkaa", label: "Veikkaa" },
+  { to: "/futures", label: "Futures" },
   { to: "/leaderboard", label: "Tulostaulu" },
 ] as const;
 
@@ -25,7 +26,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       const { data } = await supabase.auth.getUser();
       if (!active || !data.user) return;
       const meta = data.user.user_metadata as { display_name?: string; username?: string };
-    setDisplayName(meta.display_name || meta.username || data.user.email || "Pelaaja");
+      setDisplayName(meta.display_name || meta.username || data.user.email || "Pelaaja");
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")
@@ -48,7 +49,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-6">
           <Link to="/dashboard" className="flex items-center gap-2 font-bold tracking-tight">
             <Trophy className="w-5 h-5 text-accent" />
-            <span className="text-foreground">WC&nbsp;<span className="text-primary">'26</span></span>
+            <span className="text-foreground">
+              WC&nbsp;<span className="text-primary">'26</span>
+            </span>
           </Link>
           <nav className="hidden md:flex items-center gap-1 text-sm">
             {NAV.map((n) => {
@@ -108,7 +111,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 to="/admin"
                 className={`px-3 py-1.5 rounded-md ${
-                  matches.startsWith("/admin") ? "bg-accent/20 text-accent" : "text-muted-foreground"
+                  matches.startsWith("/admin")
+                    ? "bg-accent/20 text-accent"
+                    : "text-muted-foreground"
                 }`}
               >
                 Ylläpito

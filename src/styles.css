@@ -146,7 +146,13 @@
       linear-gradient(180deg, oklch(0.18 0.04 155) 0%, oklch(0.15 0.04 155) 100%),
       repeating-linear-gradient(90deg, transparent 0 80px, oklch(1 0 0 / 0.015) 80px 160px);
     background-attachment: fixed;
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      Roboto,
+      sans-serif;
   }
 }
 

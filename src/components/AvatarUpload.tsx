@@ -87,13 +87,7 @@ export function AvatarUpload({ userId, name, avatarPath, size = 64 }: Props) {
           <Camera className="w-5 h-5 text-white" />
         )}
       </span>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={onPick}
-      />
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPick} />
     </button>
   );
 }
@@ -128,5 +122,5 @@ export async function resolveAvatarUrls(paths: (string | null)[]): Promise<(stri
   for (const item of data ?? []) {
     if (item.path && item.signedUrl) map.set(item.path, item.signedUrl);
   }
-  return paths.map((p) => (p ? map.get(p) ?? null : null));
+  return paths.map((p) => (p ? (map.get(p) ?? null) : null));
 }

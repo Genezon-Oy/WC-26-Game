@@ -1,17 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { MatchCard, type PredictionDisplay, type PickValue } from "@/components/MatchCard";
 import { Flag } from "@/components/Flag";
-import { ArrowRight, Trophy } from "lucide-react";
+import { ArrowRight, Trophy, TrendingUp } from "lucide-react";
 import { Sarjataulukko } from "@/components/Sarjataulukko";
 import { AvatarUpload } from "@/components/AvatarUpload";
+import { getLeaderboard } from "@/lib/predictions.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
 function Dashboard() {
+  const fetchLeaderboard = useServerFn(getLeaderboard);
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard"],
     queryFn: async () => {
@@ -20,7 +23,8 @@ function Dashboard() {
       const userId = user.user?.id;
       const meta = (user.user?.user_metadata ?? {}) as { display_name?: string; username?: string };
       const myName = meta.display_name || meta.username || "Pelaaja";
-      const [upcoming, live, myPreds, profiles, myProfile] = await Promise.all([
+
+      const [upcoming, live, myPreds, myProfile, leaderboard] = await Promise.all([
         supabase
           .from("matches")
           .select("*")
@@ -31,7 +35,6 @@ function Dashboard() {
         userId
           ? supabase.from("predictions").select("*").eq("user_id", userId)
           : Promise.resolve({ data: [] as never[] }),
-        supabase.from("profiles").select("id, username, display_name"),
         userId
           ? supabase
               .from("profiles")
@@ -39,7 +42,9 @@ function Dashboard() {
               .eq("id", userId)
               .maybeSingle()
           : Promise.resolve({ data: null }),
+        fetchLeaderboard(),
       ]);
+
       const preds = new Map<string, PredictionDisplay>();
       for (const p of (myPreds.data ?? []) as Array<{
         match_id: string;
@@ -48,18 +53,19 @@ function Dashboard() {
       }>) {
         preds.set(p.match_id, { pick: p.pick, points: p.points });
       }
-      const { data: allPreds } = await supabase.from("predictions").select("user_id, points");
-      const totals = new Map<string, number>();
-      for (const p of allPreds ?? []) {
-        totals.set(p.user_id, (totals.get(p.user_id) ?? 0) + Number(p.points));
-      }
-      const myRank = userId
-        ? (profiles.data ?? [])
-            .map((u) => ({ id: u.id, total: totals.get(u.id) ?? 0 }))
-            .sort((a, b) => b.total - a.total)
-            .findIndex((u) => u.id === userId) + 1 || null
+
+      const myRank = userId ? leaderboard.findIndex((u) => u.id === userId) + 1 || null : null;
+      const myTotal = userId ? (leaderboard.find((u) => u.id === userId)?.total ?? 0) : 0;
+
+      // Calculate my Matrix rank
+      const matrixLeaderboard = [...leaderboard].sort((a, b) => b.matrix_score - a.matrix_score);
+      const myMatrixRank = userId
+        ? matrixLeaderboard.findIndex((u) => u.id === userId) + 1 || null
         : null;
-      const myTotal = userId ? (totals.get(userId) ?? 0) : 0;
+      const myMatrixScore = userId
+        ? (matrixLeaderboard.find((u) => u.id === userId)?.matrix_score ?? 0)
+        : 0;
+
       const upcomingList = upcoming.data ?? [];
       const nextMatch = upcomingList[0] ?? null;
       const todayEnd = new Date();
@@ -74,6 +80,8 @@ function Dashboard() {
         predictions: preds,
         myTotal,
         myRank,
+        myMatrixRank,
+        myMatrixScore,
         userId,
         myName,
         myAvatarPath: (myProfile.data as { avatar_url: string | null } | null)?.avatar_url ?? null,
@@ -105,14 +113,30 @@ function Dashboard() {
             <div className="text-2xl font-bold">{data.myName} 👋</div>
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-xs text-muted-foreground uppercase tracking-wider">Sijasi</div>
-          <div className="text-2xl font-bold tabular-nums text-primary">
-            {data.myRank ? `#${data.myRank}` : "—"}
-            <span className="text-sm text-muted-foreground font-normal">
-              {" "}
-              · {data.myTotal.toFixed(2)} p
-            </span>
+        <div className="flex flex-col items-end gap-3 text-right">
+          <div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1.5 justify-end">
+              <Trophy className="w-3.5 h-3.5" /> Safe Score
+            </div>
+            <div className="text-xl font-bold tabular-nums text-primary">
+              {data.myRank ? `#${data.myRank}` : "—"}
+              <span className="text-sm text-muted-foreground font-normal">
+                {" "}
+                · {data.myTotal.toFixed(2)} p
+              </span>
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold flex items-center gap-1.5 justify-end">
+              <TrendingUp className="w-3.5 h-3.5" /> Matrix
+            </div>
+            <div className="text-xl font-bold tabular-nums text-accent">
+              {data.myMatrixRank ? `#${data.myMatrixRank}` : "—"}
+              <span className="text-sm text-muted-foreground font-normal">
+                {" "}
+                · {data.myMatrixScore.toFixed(2)} p
+              </span>
+            </div>
           </div>
         </div>
       </section>

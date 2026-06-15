@@ -9,6 +9,8 @@ import {
   adminSyncFixtures,
   adminSetResult,
   adminPollLive,
+  adminGetResults,
+  adminSetResults,
 } from "@/lib/admin.functions";
 import { adminRefreshOdds, adminLockKickoffOdds, adminSetManualOdds } from "@/lib/odds.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -115,6 +117,57 @@ function AdminPage() {
     onSuccess: () => {
       toast.success("Kertoimet tallennettu ja lukittu");
       setManual({ match_id: "", odds_1: "", odds_x: "", odds_2: "" });
+      qc.invalidateQueries();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const getResults = useServerFn(adminGetResults);
+  const setResults = useServerFn(adminSetResults);
+
+  const [resForm, setResForm] = useState({
+    winner: "",
+    golden_boot: "",
+    most_assists: "",
+    semi1: "",
+    semi2: "",
+    semi3: "",
+    semi4: "",
+  });
+
+  const resultsQuery = useQuery({
+    queryKey: ["admin-tournament-results"],
+    queryFn: async () => {
+      const data = await getResults();
+      if (data) {
+        setResForm({
+          winner: data.winner ?? "",
+          golden_boot: data.golden_boot ?? "",
+          most_assists: data.most_assists ?? "",
+          semi1: data.semi_finalists?.[0] ?? "",
+          semi2: data.semi_finalists?.[1] ?? "",
+          semi3: data.semi_finalists?.[2] ?? "",
+          semi4: data.semi_finalists?.[3] ?? "",
+        });
+      }
+      return data;
+    },
+  });
+
+  const resultsMut = useMutation({
+    mutationFn: async () => {
+      const semis = [resForm.semi1, resForm.semi2, resForm.semi3, resForm.semi4].filter(Boolean);
+      await setResults({
+        data: {
+          winner: resForm.winner || undefined,
+          golden_boot: resForm.golden_boot || undefined,
+          most_assists: resForm.most_assists || undefined,
+          semi_finalists: semis.length > 0 ? semis : undefined,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Turnaustulokset tallennettu!");
       qc.invalidateQueries();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -232,6 +285,66 @@ function AdminPage() {
             {manualMut.isPending ? "Tallennetaan…" : "Tallenna ja lukitse kertoimet"}
           </Button>
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-border/60 bg-card/70 p-6 space-y-4">
+        <h2 className="font-semibold">Settle: Turnauksen lopputulokset</h2>
+        <p className="text-sm text-muted-foreground">
+          Aseta turnauksen lopputulokset, jotta pelaajien Futures-ennustuksista (Pre-Tournament
+          Picks) voidaan laskea lisäpisteet.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Label>Maailmanmestari</Label>
+            <Input
+              value={resForm.winner}
+              onChange={(e) => setResForm({ ...resForm, winner: e.target.value })}
+              placeholder="Esim. Brazil"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Maalikuningas (Golden Boot)</Label>
+            <Input
+              value={resForm.golden_boot}
+              onChange={(e) => setResForm({ ...resForm, golden_boot: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>Eniten syöttöjä</Label>
+            <Input
+              value={resForm.most_assists}
+              onChange={(e) => setResForm({ ...resForm, most_assists: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1 md:col-span-2">
+            <Label>Välieräjoukkueet (4 kpl)</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <Input
+                value={resForm.semi1}
+                onChange={(e) => setResForm({ ...resForm, semi1: e.target.value })}
+                placeholder="Joukkue 1"
+              />
+              <Input
+                value={resForm.semi2}
+                onChange={(e) => setResForm({ ...resForm, semi2: e.target.value })}
+                placeholder="Joukkue 2"
+              />
+              <Input
+                value={resForm.semi3}
+                onChange={(e) => setResForm({ ...resForm, semi3: e.target.value })}
+                placeholder="Joukkue 3"
+              />
+              <Input
+                value={resForm.semi4}
+                onChange={(e) => setResForm({ ...resForm, semi4: e.target.value })}
+                placeholder="Joukkue 4"
+              />
+            </div>
+          </div>
+        </div>
+        <Button onClick={() => resultsMut.mutate()} disabled={resultsMut.isPending}>
+          {resultsMut.isPending ? "Tallennetaan..." : "Tallenna tulokset"}
+        </Button>
       </section>
 
       <section className="rounded-2xl border border-border/60 bg-card/70 p-6 space-y-4">

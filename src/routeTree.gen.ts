@@ -16,6 +16,7 @@ import { Route as AuthenticatedTeamsRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedPredictionsRouteImport } from './routes/_authenticated/predictions'
 import { Route as AuthenticatedLeaderboardRouteImport } from './routes/_authenticated/leaderboard'
 import { Route as AuthenticatedGroupsRouteImport } from './routes/_authenticated/groups'
+import { Route as AuthenticatedFuturesRouteImport } from './routes/_authenticated/futures'
 import { Route as AuthenticatedFixturesRouteImport } from './routes/_authenticated/fixtures'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -59,6 +60,11 @@ const AuthenticatedLeaderboardRoute =
 const AuthenticatedGroupsRoute = AuthenticatedGroupsRouteImport.update({
   id: '/groups',
   path: '/groups',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFuturesRoute = AuthenticatedFuturesRouteImport.update({
+  id: '/futures',
+  path: '/futures',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedFixturesRoute = AuthenticatedFixturesRouteImport.update({
@@ -111,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/fixtures': typeof AuthenticatedFixturesRouteWithChildren
+  '/futures': typeof AuthenticatedFuturesRoute
   '/groups': typeof AuthenticatedGroupsRoute
   '/leaderboard': typeof AuthenticatedLeaderboardRoute
   '/predictions': typeof AuthenticatedPredictionsRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/fixtures': typeof AuthenticatedFixturesRouteWithChildren
+  '/futures': typeof AuthenticatedFuturesRoute
   '/groups': typeof AuthenticatedGroupsRoute
   '/leaderboard': typeof AuthenticatedLeaderboardRoute
   '/predictions': typeof AuthenticatedPredictionsRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/fixtures': typeof AuthenticatedFixturesRouteWithChildren
+  '/_authenticated/futures': typeof AuthenticatedFuturesRoute
   '/_authenticated/groups': typeof AuthenticatedGroupsRoute
   '/_authenticated/leaderboard': typeof AuthenticatedLeaderboardRoute
   '/_authenticated/predictions': typeof AuthenticatedPredictionsRoute
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/fixtures'
+    | '/futures'
     | '/groups'
     | '/leaderboard'
     | '/predictions'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/fixtures'
+    | '/futures'
     | '/groups'
     | '/leaderboard'
     | '/predictions'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/fixtures'
+    | '/_authenticated/futures'
     | '/_authenticated/groups'
     | '/_authenticated/leaderboard'
     | '/_authenticated/predictions'
@@ -262,6 +274,13 @@ declare module '@tanstack/react-router' {
       path: '/groups'
       fullPath: '/groups'
       preLoaderRoute: typeof AuthenticatedGroupsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/futures': {
+      id: '/_authenticated/futures'
+      path: '/futures'
+      fullPath: '/futures'
+      preLoaderRoute: typeof AuthenticatedFuturesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/fixtures': {
@@ -351,6 +370,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFixturesRoute: typeof AuthenticatedFixturesRouteWithChildren
+  AuthenticatedFuturesRoute: typeof AuthenticatedFuturesRoute
   AuthenticatedGroupsRoute: typeof AuthenticatedGroupsRoute
   AuthenticatedLeaderboardRoute: typeof AuthenticatedLeaderboardRoute
   AuthenticatedPredictionsRoute: typeof AuthenticatedPredictionsRoute
@@ -364,6 +384,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFixturesRoute: AuthenticatedFixturesRouteWithChildren,
+  AuthenticatedFuturesRoute: AuthenticatedFuturesRoute,
   AuthenticatedGroupsRoute: AuthenticatedGroupsRoute,
   AuthenticatedLeaderboardRoute: AuthenticatedLeaderboardRoute,
   AuthenticatedPredictionsRoute: AuthenticatedPredictionsRoute,
@@ -384,13 +405,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

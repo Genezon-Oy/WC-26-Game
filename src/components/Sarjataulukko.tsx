@@ -75,12 +75,7 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
       // Resolve avatar URLs
       const allProfiles = profiles ?? [];
       const urls = await resolveAvatarUrls(allProfiles.map((p) => p.avatar_url));
-      const profileMap = new Map(
-        allProfiles.map((p, i) => [
-          p.id,
-          { ...p, avatarUrl: urls[i] },
-        ]),
-      );
+      const profileMap = new Map(allProfiles.map((p, i) => [p.id, { ...p, avatarUrl: urls[i] }]));
 
       // Rank
       const ranked = allProfiles
@@ -105,7 +100,7 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
             const userMap = perDay.get(player.id);
             const prev = row; // unused; we'll compute cumulative below
             void prev;
-            row[player.id] = (userMap?.get(dKey) ?? 0);
+            row[player.id] = userMap?.get(dKey) ?? 0;
           }
         }
         return row;
@@ -138,9 +133,7 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
             <Trophy className="w-5 h-5 text-accent" />
             Sarjataulukko
           </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Pisteiden kehitys päivä kerrallaan
-          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">Pisteiden kehitys päivä kerrallaan</p>
         </div>
       </div>
 
@@ -163,7 +156,7 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
                 tickLine={false}
-              allowDecimals
+                allowDecimals
               />
               <Tooltip
                 contentStyle={{
@@ -174,7 +167,7 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
                 }}
                 formatter={(value: number, name: string) => {
                   const player = data.ranked.find((p) => p.id === name);
-                return [`${Number(value).toFixed(2)} p`, player?.name ?? name];
+                  return [`${Number(value).toFixed(2)} p`, player?.name ?? name];
                 }}
               />
               {data.ranked.map((p, i) => (
@@ -222,9 +215,7 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
           </div>
         ))}
         {data.ranked.length === 0 && (
-          <div className="text-sm text-muted-foreground py-4 text-center">
-            Ei pelaajia vielä.
-          </div>
+          <div className="text-sm text-muted-foreground py-4 text-center">Ei pelaajia vielä.</div>
         )}
       </div>
     </section>

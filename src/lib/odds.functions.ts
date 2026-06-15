@@ -239,7 +239,7 @@ export const adminRefreshOdds = createServerFn({ method: "POST" })
       return { updated: 0, failed: matches.length, errors: [(err as Error).message] };
     }
 
-    const oddsToUpsert: any[] = [];
+    const oddsToUpsert: Record<string, unknown>[] = [];
     let updated = 0;
     let failed = 0;
     const errors: string[] = [];

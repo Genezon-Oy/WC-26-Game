@@ -40,7 +40,7 @@ export function MatchCard({
       <div className="rounded-xl border border-border/60 bg-card/70 hover:bg-card transition-colors p-4 shadow-sm">
         <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-muted-foreground mb-3">
           <span>
-            {match.group_code ? `Lohko ${match.group_code}` : match.matchday ?? "Pudotuspelit"}
+            {match.group_code ? `Lohko ${match.group_code}` : (match.matchday ?? "Pudotuspelit")}
           </span>
           {isLive && (
             <span className="flex items-center gap-1 text-live font-semibold">
@@ -50,7 +50,11 @@ export function MatchCard({
           {!isLive && isFinished && <span className="text-primary">PP</span>}
           {!isLive && !isFinished && (
             <span>
-              {kickoff.toLocaleDateString("fi-FI", { weekday: "short", month: "short", day: "numeric" })}
+              {kickoff.toLocaleDateString("fi-FI", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+              })}
               &nbsp;
               {kickoff.toLocaleTimeString("fi-FI", { hour: "2-digit", minute: "2-digit" })}
             </span>
@@ -59,12 +63,16 @@ export function MatchCard({
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
           <div className="text-right">
             <Flag name={match.home_team} className="w-8 h-auto" />
-            <div className="mt-1 text-sm font-medium text-foreground line-clamp-1">{match.home_team}</div>
+            <div className="mt-1 text-sm font-medium text-foreground line-clamp-1">
+              {match.home_team}
+            </div>
           </div>
           <div className="text-center">
             {isFinished ? (
               <div className="text-3xl font-bold tabular-nums text-foreground">
-                {match.home_score}<span className="text-muted-foreground mx-1">–</span>{match.away_score}
+                {match.home_score}
+                <span className="text-muted-foreground mx-1">–</span>
+                {match.away_score}
               </div>
             ) : (
               <div className="text-sm font-semibold text-muted-foreground">vs</div>
@@ -72,7 +80,9 @@ export function MatchCard({
           </div>
           <div className="text-left">
             <Flag name={match.away_team} className="w-8 h-auto" />
-            <div className="mt-1 text-sm font-medium text-foreground line-clamp-1">{match.away_team}</div>
+            <div className="mt-1 text-sm font-medium text-foreground line-clamp-1">
+              {match.away_team}
+            </div>
           </div>
         </div>
         <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
@@ -80,7 +90,8 @@ export function MatchCard({
           {prediction?.pick ? (
             <span className="flex items-center gap-2">
               <span>
-                Veikkaus: <span className="font-medium text-foreground tabular-nums">{prediction.pick}</span>
+                Veikkaus:{" "}
+                <span className="font-medium text-foreground tabular-nums">{prediction.pick}</span>
               </span>
               {isFinished && typeof prediction.points === "number" && (
                 <span

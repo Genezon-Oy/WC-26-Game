@@ -60,19 +60,34 @@ function VeikkaaIndex() {
         </p>
       </div>
 
-      <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/15 via-card/70 to-card/70 p-6 text-center">
-        <div className="text-xs uppercase tracking-wider text-muted-foreground">Veikkaamatta</div>
-        <div className="text-5xl font-bold tabular-nums mt-2 text-primary">
+      <div
+        className={`rounded-2xl border p-6 text-center transition-colors ${data.unpredicted.length > 0 ? "border-destructive/60 bg-gradient-to-br from-destructive/20 via-destructive/5 to-card" : "border-border/60 bg-gradient-to-br from-primary/15 via-card/70 to-card/70"}`}
+      >
+        <div
+          className={`text-xs uppercase tracking-wider font-bold ${data.unpredicted.length > 0 ? "text-destructive" : "text-muted-foreground"}`}
+        >
+          {data.unpredicted.length > 0 ? "⚠️ HUOMIO: VEIKKAUKSIA PUUTTUU!" : "Veikkaamatta"}
+        </div>
+        <div
+          className={`text-5xl font-bold tabular-nums mt-2 ${data.unpredicted.length > 0 ? "text-destructive" : "text-primary"}`}
+        >
           {data.unpredicted.length}
         </div>
         <div className="text-sm text-muted-foreground mt-1">tulevaa ottelua</div>
+
+        {data.unpredicted.length > 0 && (
+          <p className="mt-3 text-sm font-semibold text-destructive">
+            Sääntöjen mukaan jokaiseen otteluun on pakko tehdä tasan yksi valinta!
+          </p>
+        )}
+
         {next ? (
           <Button
             size="lg"
-            className="mt-5"
+            className={`mt-5 ${data.unpredicted.length > 0 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}`}
             onClick={() => navigate({ to: "/veikkaa/$matchId", params: { matchId: next.id } })}
           >
-            {data.unpredicted.length > 0 ? "Aloita veikkaus" : "Selaa veikkauksia"}
+            {data.unpredicted.length > 0 ? "Tee puuttuvat veikkaukset" : "Selaa veikkauksia"}
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         ) : (
