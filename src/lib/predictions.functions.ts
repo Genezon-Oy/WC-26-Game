@@ -202,3 +202,44 @@ export const getMyFutures = createServerFn({ method: "GET" })
       .maybeSingle();
     return data;
   });
+
+export const getPlayerDetails = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ target_user_id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { target_user_id } = data;
+    const { userId } = context;
+    const isMe = userId === target_user_id;
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [
+      { data: profile },
+      { data: futures },
+      { data: preds },
+      { data: matches },
+    ] = await Promise.all([
+      supabaseAdmin.from("profiles").select("id, username, display_name, avatar_url").eq("id", target_user_id).maybeSingle(),
+      supabaseAdmin.from("futures_picks").select("*").eq("user_id", target_user_id).maybeSingle(),
+      supabaseAdmin.from("predictions").select("match_id, pick, points").eq("user_id", target_user_id),
+      supabaseAdmin.from("matches").select("id, kickoff_at").order("kickoff_at", { ascending: true }),
+    ]);
+
+    if (!profile) throw new Error("Player not found");
+
+    const now = new Date();
+    const safePreds = (preds ?? []).map((p) => {
+      const m = matches?.find((match) => match.id === p.match_id);
+      const matchStarted = m ? new Date(m.kickoff_at) <= now : false;
+      return {
+        ...p,
+        // Hide pick if not me and match hasn't started
+        pick: (!isMe && !matchStarted) ? null : p.pick,
+      };
+    });
+
+    return {
+      profile,
+      futures: futures ?? null,
+      predictions: safePreds,
+    };
+  });

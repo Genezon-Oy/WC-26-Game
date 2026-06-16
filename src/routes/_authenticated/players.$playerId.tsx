@@ -1,0 +1,188 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getLeaderboard, getPlayerDetails } from "@/lib/predictions.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { AvatarView } from "@/components/AvatarUpload";
+import { Trophy, Target, TrendingUp, Medal, Star } from "lucide-react";
+import { MatchCard, type PredictionDisplay } from "@/components/MatchCard";
+import { useMemo } from "react";
+
+export const Route = createFileRoute("/_authenticated/players/$playerId")({
+  component: PlayerProfilePage,
+});
+
+function PlayerProfilePage() {
+  const { playerId } = Route.useParams();
+  const fetchLeaderboard = useServerFn(getLeaderboard);
+  const fetchDetails = useServerFn(getPlayerDetails);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["player-profile", playerId],
+    queryFn: async () => {
+      const [lb, details, { data: matches }] = await Promise.all([
+        fetchLeaderboard(),
+        fetchDetails({ data: { target_user_id: playerId } }),
+        supabase.from("matches").select("*").order("kickoff_at", { ascending: false }),
+      ]);
+      const lbUser = lb.find((u) => u.id === playerId);
+      const rank = lb.findIndex((u) => u.id === playerId) + 1;
+      return { lbUser, rank, details, matches: matches ?? [] };
+    },
+  });
+
+  const predsMap = useMemo(() => {
+    const map = new Map<string, PredictionDisplay>();
+    if (data?.details?.predictions) {
+      for (const p of data.details.predictions) {
+        // We cast p.pick because it's string | null
+        map.set(p.match_id, { pick: p.pick as "1" | "X" | "2" | null, points: p.points });
+      }
+    }
+    return map;
+  }, [data?.details?.predictions]);
+
+  if (isLoading || !data) {
+    return <div className="text-muted-foreground animate-pulse">Ladataan pelaajan tietoja…</div>;
+  }
+
+  if (!data.details?.profile || !data.lbUser) {
+    return <div className="text-destructive font-semibold">Pelaajaa ei löytynyt.</div>;
+  }
+
+  const { lbUser, rank, details, matches } = data;
+  const { profile, futures } = details;
+  const displayName = profile.display_name || profile.username;
+
+  // Filter matches where user made a prediction or it's finished
+  const userMatches = matches.filter((m) => predsMap.has(m.id));
+  
+  // Sort: finished first, then scheduled. But we ordered by kickoff desc, which is good for past matches.
+  // Actually, separating into "Upcoming" and "Past" might be nice.
+  const now = new Date();
+  const pastMatches = userMatches.filter((m) => new Date(m.kickoff_at) <= now);
+  // upcoming matches are tricky because user's pick is hidden if not me. But if they have a prediction, we can show that they *made* a prediction.
+  const upcomingMatches = userMatches.filter((m) => new Date(m.kickoff_at) > now).reverse(); // reverse so next is first
+
+  return (
+    <div className="space-y-8 max-w-5xl mx-auto pb-12">
+      {/* Profile Header */}
+      <section className="rounded-3xl border border-border/60 bg-gradient-to-br from-card/80 to-card/40 p-6 sm:p-10 flex flex-col sm:flex-row items-center sm:items-start gap-8 shadow-sm">
+        <div className="shrink-0 relative">
+          <AvatarView name={displayName} url={profile.avatar_url} size={120} />
+          {rank === 1 && (
+            <div className="absolute -top-3 -right-3 bg-yellow-500 text-yellow-950 p-2 rounded-full shadow-lg">
+              <Trophy className="w-6 h-6" />
+            </div>
+          )}
+        </div>
+        <div className="flex-1 text-center sm:text-left">
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight">{displayName}</h1>
+          <p className="text-muted-foreground mt-1 text-lg">@{profile.username}</p>
+          
+          <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="rounded-2xl bg-card/60 border border-border/50 p-4">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1 flex items-center justify-center sm:justify-start gap-1.5">
+                <Medal className="w-3.5 h-3.5" /> Sijoitus
+              </div>
+              <div className="text-2xl font-bold tabular-nums">#{rank}</div>
+            </div>
+            <div className="rounded-2xl bg-card/60 border border-border/50 p-4">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1 flex items-center justify-center sm:justify-start gap-1.5">
+                <Trophy className="w-3.5 h-3.5" /> Yhteensä
+              </div>
+              <div className="text-2xl font-bold tabular-nums text-primary">{lbUser.total.toFixed(2)} p</div>
+            </div>
+            <div className="rounded-2xl bg-card/60 border border-border/50 p-4">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1 flex items-center justify-center sm:justify-start gap-1.5">
+                <Target className="w-3.5 h-3.5" /> Osumat
+              </div>
+              <div className="text-2xl font-bold tabular-nums">{lbUser.correct} / {lbUser.settled}</div>
+            </div>
+            <div className="rounded-2xl bg-card/60 border border-border/50 p-4">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1 flex items-center justify-center sm:justify-start gap-1.5">
+                <TrendingUp className="w-3.5 h-3.5" /> Matrix
+              </div>
+              <div className={`text-2xl font-bold tabular-nums ${lbUser.matrix_bonus > 0 ? "text-emerald-500" : lbUser.matrix_bonus < 0 ? "text-destructive" : ""}`}>
+                {lbUser.matrix_bonus > 0 ? "+" : ""}{lbUser.matrix_bonus.toFixed(2)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Futures */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Star className="text-accent w-5 h-5" /> Ennustukset (Futures)
+        </h2>
+        {futures ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <FutureCard label="Mestari" value={futures.winner} />
+            <FutureCard label="Maalikuningas" value={futures.golden_boot} />
+            <FutureCard label="Syöttökuningas" value={futures.most_assists} />
+            <div className="rounded-2xl border border-border/60 bg-card/50 p-4 flex flex-col justify-center">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Välierissä</div>
+              <ul className="text-sm font-semibold space-y-1">
+                {futures.semi_finalists?.map((t: string, i: number) => (
+                  <li key={i}>• {t || "-"}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-muted-foreground text-sm">
+            Ei futures-veikkauksia
+          </div>
+        )}
+      </section>
+
+      {/* Matches */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
+        {/* Past Matches */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-bold">Pelatut ottelut ({pastMatches.length})</h2>
+          <div className="space-y-3">
+            {pastMatches.map((m) => (
+              <MatchCard key={m.id} match={m} prediction={predsMap.get(m.id)} />
+            ))}
+            {pastMatches.length === 0 && (
+              <div className="text-sm text-muted-foreground">Ei pelattuja otteluita.</div>
+            )}
+          </div>
+        </section>
+
+        {/* Upcoming Matches */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-bold">Tulevat ottelut ({upcomingMatches.length})</h2>
+          <div className="space-y-3">
+            {upcomingMatches.map((m) => (
+              <div key={m.id} className="relative">
+                <MatchCard match={m} prediction={predsMap.get(m.id)} />
+                {predsMap.get(m.id)?.pick === null && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-[2px] rounded-2xl pointer-events-none">
+                    <div className="bg-card px-4 py-2 rounded-full border border-border/50 text-sm font-semibold shadow-sm">
+                      Veikkaus piilotettu
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            {upcomingMatches.length === 0 && (
+              <div className="text-sm text-muted-foreground">Ei tulevia veikkauksia.</div>
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function FutureCard({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/50 p-4 flex flex-col justify-center">
+      <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">{label}</div>
+      <div className="font-semibold text-lg">{value || <span className="text-muted-foreground/50">-</span>}</div>
+    </div>
+  );
+}

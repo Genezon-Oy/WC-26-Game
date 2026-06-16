@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getLeaderboard } from "@/lib/predictions.functions";
@@ -59,7 +59,11 @@ function LeaderboardPage() {
                       <span className="text-muted-foreground">{i + 1}</span>
                     )}
                   </td>
-                  <td className="p-3 font-medium">{row.display_name}</td>
+                  <td className="p-3 font-medium">
+                    <Link to="/players/$playerId" params={{ playerId: row.id }} className="hover:underline hover:text-primary transition-colors">
+                      {row.display_name}
+                    </Link>
+                  </td>
                   <td className="p-3 text-center tabular-nums">
                     {row.correct} / {row.settled}
                   </td>

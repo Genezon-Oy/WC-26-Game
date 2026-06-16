@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { getLeaderboard } from "@/lib/predictions.functions";
@@ -290,7 +291,9 @@ export function Sarjataulukko({ currentUserId }: { currentUserId: string | undef
                 aria-hidden
               />
               <AvatarView name={p.name} url={p.avatar} size={36} />
-              <span className="flex-1 font-semibold text-foreground truncate">{p.name}</span>
+              <Link to="/players/$playerId" params={{ playerId: p.id }} className="flex-1 font-semibold text-foreground truncate hover:underline hover:text-primary transition-colors">
+                {p.name}
+              </Link>
               <div className="flex flex-col items-end">
                 <UITooltip>
                   <TooltipTrigger asChild>

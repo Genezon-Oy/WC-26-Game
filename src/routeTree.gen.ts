@@ -27,6 +27,7 @@ import { Route as AuthenticatedFixturesIndexRouteImport } from './routes/_authen
 import { Route as ApiPublicSeedAdminRouteImport } from './routes/api/public/seed-admin'
 import { Route as AuthenticatedVeikkaaMatchIdRouteImport } from './routes/_authenticated/veikkaa.$matchId'
 import { Route as AuthenticatedTeamsTeamRouteImport } from './routes/_authenticated/teams.$team'
+import { Route as AuthenticatedPlayersPlayerIdRouteImport } from './routes/_authenticated/players.$playerId'
 import { Route as AuthenticatedFixturesMatchIdRouteImport } from './routes/_authenticated/fixtures.$matchId'
 
 const AuthRoute = AuthRouteImport.update({
@@ -123,6 +124,12 @@ const AuthenticatedTeamsTeamRoute = AuthenticatedTeamsTeamRouteImport.update({
   path: '/$team',
   getParentRoute: () => AuthenticatedTeamsRoute,
 } as any)
+const AuthenticatedPlayersPlayerIdRoute =
+  AuthenticatedPlayersPlayerIdRouteImport.update({
+    id: '/players/$playerId',
+    path: '/players/$playerId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedFixturesMatchIdRoute =
   AuthenticatedFixturesMatchIdRouteImport.update({
     id: '/$matchId',
@@ -144,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/saannot': typeof AuthenticatedSaannotRoute
   '/teams': typeof AuthenticatedTeamsRouteWithChildren
   '/fixtures/$matchId': typeof AuthenticatedFixturesMatchIdRoute
+  '/players/$playerId': typeof AuthenticatedPlayersPlayerIdRoute
   '/teams/$team': typeof AuthenticatedTeamsTeamRoute
   '/veikkaa/$matchId': typeof AuthenticatedVeikkaaMatchIdRoute
   '/api/public/seed-admin': typeof ApiPublicSeedAdminRoute
@@ -163,6 +171,7 @@ export interface FileRoutesByTo {
   '/teams': typeof AuthenticatedTeamsRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
   '/fixtures/$matchId': typeof AuthenticatedFixturesMatchIdRoute
+  '/players/$playerId': typeof AuthenticatedPlayersPlayerIdRoute
   '/teams/$team': typeof AuthenticatedTeamsTeamRoute
   '/veikkaa/$matchId': typeof AuthenticatedVeikkaaMatchIdRoute
   '/api/public/seed-admin': typeof ApiPublicSeedAdminRoute
@@ -185,6 +194,7 @@ export interface FileRoutesById {
   '/_authenticated/teams': typeof AuthenticatedTeamsRouteWithChildren
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/fixtures/$matchId': typeof AuthenticatedFixturesMatchIdRoute
+  '/_authenticated/players/$playerId': typeof AuthenticatedPlayersPlayerIdRoute
   '/_authenticated/teams/$team': typeof AuthenticatedTeamsTeamRoute
   '/_authenticated/veikkaa/$matchId': typeof AuthenticatedVeikkaaMatchIdRoute
   '/api/public/seed-admin': typeof ApiPublicSeedAdminRoute
@@ -207,6 +217,7 @@ export interface FileRouteTypes {
     | '/saannot'
     | '/teams'
     | '/fixtures/$matchId'
+    | '/players/$playerId'
     | '/teams/$team'
     | '/veikkaa/$matchId'
     | '/api/public/seed-admin'
@@ -226,6 +237,7 @@ export interface FileRouteTypes {
     | '/teams'
     | '/'
     | '/fixtures/$matchId'
+    | '/players/$playerId'
     | '/teams/$team'
     | '/veikkaa/$matchId'
     | '/api/public/seed-admin'
@@ -247,6 +259,7 @@ export interface FileRouteTypes {
     | '/_authenticated/teams'
     | '/_authenticated/'
     | '/_authenticated/fixtures/$matchId'
+    | '/_authenticated/players/$playerId'
     | '/_authenticated/teams/$team'
     | '/_authenticated/veikkaa/$matchId'
     | '/api/public/seed-admin'
@@ -388,6 +401,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTeamsTeamRouteImport
       parentRoute: typeof AuthenticatedTeamsRoute
     }
+    '/_authenticated/players/$playerId': {
+      id: '/_authenticated/players/$playerId'
+      path: '/players/$playerId'
+      fullPath: '/players/$playerId'
+      preLoaderRoute: typeof AuthenticatedPlayersPlayerIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/fixtures/$matchId': {
       id: '/_authenticated/fixtures/$matchId'
       path: '/$matchId'
@@ -436,6 +456,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSaannotRoute: typeof AuthenticatedSaannotRoute
   AuthenticatedTeamsRoute: typeof AuthenticatedTeamsRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedPlayersPlayerIdRoute: typeof AuthenticatedPlayersPlayerIdRoute
   AuthenticatedVeikkaaMatchIdRoute: typeof AuthenticatedVeikkaaMatchIdRoute
   AuthenticatedVeikkaaIndexRoute: typeof AuthenticatedVeikkaaIndexRoute
 }
@@ -452,6 +473,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSaannotRoute: AuthenticatedSaannotRoute,
   AuthenticatedTeamsRoute: AuthenticatedTeamsRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedPlayersPlayerIdRoute: AuthenticatedPlayersPlayerIdRoute,
   AuthenticatedVeikkaaMatchIdRoute: AuthenticatedVeikkaaMatchIdRoute,
   AuthenticatedVeikkaaIndexRoute: AuthenticatedVeikkaaIndexRoute,
 }
