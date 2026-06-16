@@ -210,10 +210,21 @@ export const adminSyncFixtures = createServerFn({ method: "POST" })
         winner,
       };
     });
-    const { error: mErr } = await supabaseAdmin
+    const { data: upsertedMatches, error: mErr } = await supabaseAdmin
       .from("matches")
-      .upsert(rows, { onConflict: "match_key" });
+      .upsert(rows, { onConflict: "match_key" })
+      .select("id, status, home_score");
     if (mErr) throw new Error(`Matches upsert: ${mErr.message}`);
+
+    if (upsertedMatches) {
+      const finishedIds = upsertedMatches
+        .filter((m) => m.status === "finished" && m.home_score !== null)
+        .map((m) => m.id);
+      
+      if (finishedIds.length > 0) {
+        await rescorePredictions(finishedIds);
+      }
+    }
 
     return { teams: teams.length, matches: rows.length };
   });
