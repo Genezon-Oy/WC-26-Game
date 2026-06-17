@@ -323,7 +323,7 @@ export async function performPollLive() {
 
   const { data: existingMatches } = await supabaseAdmin
     .from("matches")
-    .select("id, match_key, stage, matchday, kickoff_at, venue, home_team, away_team")
+    .select("id, match_key, stage, matchday, kickoff_at, venue, home_team, away_team, home_score, away_score, status")
     .in("match_key", candidates);
 
   if (!existingMatches || existingMatches.length === 0) {
@@ -347,6 +347,15 @@ export async function performPollLive() {
         : m.status === "IN_PLAY" || m.status === "PAUSED"
           ? "live"
           : "scheduled";
+
+    // Only update if something actually changed
+    if (
+      existing.status === status &&
+      existing.home_score === m.score.fullTime.home &&
+      existing.away_score === m.score.fullTime.away
+    ) {
+      continue;
+    }
 
     let winner = null;
     if (
