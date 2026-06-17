@@ -25,7 +25,7 @@ function SaannotPage() {
           </h2>
           <ul className="space-y-3 text-sm text-foreground/90 list-disc list-inside">
             <li>
-              Jokaiseen otteluun on <strong>pakko</strong> tehdä tasan yksi valinta: 1 (Kotivoitto),
+              Jokaiseen otteluun voi tehdä yhden valinnan: 1 (Kotivoitto),
               X (Tasapeli) tai 2 (Vierasvoitto).
             </li>
             <li>
