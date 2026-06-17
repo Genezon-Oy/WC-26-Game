@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BookOpen, Trophy, Info, AlertTriangle } from "lucide-react";
+import { BookOpen, Trophy, DollarSign, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/saannot")({
   component: SaannotPage,
@@ -42,7 +42,7 @@ function SaannotPage() {
 
         <section className="bg-card/60 border border-border/50 rounded-2xl p-6">
           <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
-            <Info className="text-emerald-400 w-5 h-5" /> 2. Money Making Matrix (Matrix-tuotto)
+            <DollarSign className="text-emerald-400 w-5 h-5" /> 2. Money Making Matrix (Matrix-tuotto)
           </h2>
           <p className="text-sm text-foreground/90 mb-3">
             Peruspisteiden lisäksi jokainen veikkaus osallistuu automaattisesti{" "}
@@ -70,7 +70,7 @@ function SaannotPage() {
 
         <section className="bg-card/60 border border-border/50 rounded-2xl p-6">
           <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
-            <AlertTriangle className="text-amber-500 w-5 h-5" /> 3. Futures (Turnausvedot)
+            <Sparkles className="text-amber-500 w-5 h-5" /> 3. Futures (Turnausvedot)
           </h2>
           <ul className="space-y-3 text-sm text-foreground/90 list-disc list-inside">
             <li>
