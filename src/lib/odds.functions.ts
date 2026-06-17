@@ -184,7 +184,7 @@ async function snapshotOneMatch(matchId: string): Promise<{
   if (!picked) return { ok: false, reason: "No h2h odds available for this match in The Odds API" };
 
   const minutesToKickoff = (new Date(m.kickoff_at).getTime() - Date.now()) / 60000;
-  const shouldLock = minutesToKickoff <= 30;
+  const shouldLock = minutesToKickoff <= 240;
 
   const { error: upsertErr } = await supabaseAdmin.from("match_odds").upsert(
     {
@@ -208,93 +208,117 @@ async function snapshotOneMatch(matchId: string): Promise<{
   };
 }
 
+export async function performRefreshOdds() {
+  const apiKey = import.meta.env.VITE_ODDS_API_KEY || process.env.ODDS_API_KEY;
+  if (!apiKey) {
+    return { updated: 0, failed: 0, errors: ["ODDS_API_KEY not configured"] };
+  }
+
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const horizonIso = new Date(Date.now() + 14 * 24 * 3600_000).toISOString(); // next 14 days
+  const { data: matches } = await supabaseAdmin
+    .from("matches")
+    .select("id, kickoff_at, home_team, away_team, match_odds:match_odds(locked)")
+    .lte("kickoff_at", horizonIso)
+    .gte("kickoff_at", new Date(Date.now() - 3 * 3600_000).toISOString()) // include very recent kickoffs
+    .order("kickoff_at", { ascending: true })
+    .limit(60);
+
+  if (!matches?.length) {
+    return { updated: 0, failed: 0, errors: [] };
+  }
+
+  let events: OddsApiEvent[];
+  try {
+    events = await fetchOddsFromAPI(apiKey);
+  } catch (err) {
+    return { updated: 0, failed: matches.length, errors: [(err as Error).message] };
+  }
+
+  const oddsToUpsert: import("./../integrations/supabase/types").Database["public"]["Tables"]["match_odds"]["Insert"][] =
+    [];
+  let updated = 0;
+  let failed = 0;
+  const errors: string[] = [];
+
+  for (const m of matches) {
+    const odds = (
+      m as unknown as { match_odds: Array<{ locked: boolean }> | { locked: boolean } | null }
+    ).match_odds;
+    const isLocked = Array.isArray(odds) ? odds[0]?.locked : odds?.locked;
+    if (isLocked) continue;
+
+    const matchedEvent = findMatchingEvent(m.home_team, m.away_team, m.kickoff_at, events);
+    if (!matchedEvent) {
+      failed++;
+      errors.push(`${m.id}: match not found in The Odds API`);
+      continue;
+    }
+
+    const picked = calculateAverageOdds(matchedEvent);
+    if (!picked) {
+      failed++;
+      errors.push(`${m.id}: no h2h odds available`);
+      continue;
+    }
+
+    const minutesToKickoff = (new Date(m.kickoff_at).getTime() - Date.now()) / 60000;
+    const shouldLock = minutesToKickoff <= 240;
+
+    oddsToUpsert.push({
+      match_id: m.id,
+      odds_1: picked.odds_1,
+      odds_x: picked.odds_x,
+      odds_2: picked.odds_2,
+      bookmaker: picked.bookmaker,
+      source: "the-odds-api",
+      snapshot_at: new Date().toISOString(),
+      locked: shouldLock,
+    });
+  }
+
+  if (oddsToUpsert.length > 0) {
+    const { error: upsertErr } = await supabaseAdmin
+      .from("match_odds")
+      .upsert(oddsToUpsert, { onConflict: "match_id" });
+
+    if (upsertErr) {
+      failed += oddsToUpsert.length;
+      errors.push(`Database batch error: ${upsertErr.message}`);
+    } else {
+      updated += oddsToUpsert.length;
+    }
+  }
+
+  // Safety net: Aggressively lock any matches < 240 mins away using existing odds
+  // in case The Odds API dropped them from the response before kickoff.
+  const forceLockMatches = matches.filter((m) => {
+    const odds = (
+      m as unknown as { match_odds: Array<{ locked: boolean }> | { locked: boolean } | null }
+    ).match_odds;
+    const isLocked = Array.isArray(odds) ? odds[0]?.locked : odds?.locked;
+    const minutesToKickoff = (new Date(m.kickoff_at).getTime() - Date.now()) / 60000;
+    return !isLocked && minutesToKickoff <= 240;
+  });
+
+  if (forceLockMatches.length > 0) {
+    const forceLockIds = forceLockMatches.map((m) => m.id);
+    await supabaseAdmin
+      .from("match_odds")
+      .update({ locked: true })
+      .in("match_id", forceLockIds)
+      .eq("locked", false);
+  }
+
+  return { updated, failed, errors: errors.slice(0, 10) };
+}
+
 // Admin: refresh (and lock if near kickoff) odds for all upcoming matches that aren't locked yet.
 export const adminRefreshOdds = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.userId);
-    const apiKey = import.meta.env.VITE_ODDS_API_KEY || process.env.ODDS_API_KEY;
-    if (!apiKey) {
-      return { updated: 0, failed: 0, errors: ["ODDS_API_KEY not configured"] };
-    }
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const horizonIso = new Date(Date.now() + 14 * 24 * 3600_000).toISOString(); // next 14 days
-    const { data: matches } = await supabaseAdmin
-      .from("matches")
-      .select("id, kickoff_at, home_team, away_team, match_odds:match_odds(locked)")
-      .lte("kickoff_at", horizonIso)
-      .gte("kickoff_at", new Date(Date.now() - 3 * 3600_000).toISOString()) // include very recent kickoffs
-      .order("kickoff_at", { ascending: true })
-      .limit(60);
-
-    if (!matches?.length) {
-      return { updated: 0, failed: 0, errors: [] };
-    }
-
-    let events: OddsApiEvent[];
-    try {
-      events = await fetchOddsFromAPI(apiKey);
-    } catch (err) {
-      return { updated: 0, failed: matches.length, errors: [(err as Error).message] };
-    }
-
-    const oddsToUpsert: import("./../integrations/supabase/types").Database["public"]["Tables"]["match_odds"]["Insert"][] =
-      [];
-    let updated = 0;
-    let failed = 0;
-    const errors: string[] = [];
-
-    for (const m of matches) {
-      const odds = (
-        m as unknown as { match_odds: Array<{ locked: boolean }> | { locked: boolean } | null }
-      ).match_odds;
-      const isLocked = Array.isArray(odds) ? odds[0]?.locked : odds?.locked;
-      if (isLocked) continue;
-
-      const matchedEvent = findMatchingEvent(m.home_team, m.away_team, m.kickoff_at, events);
-      if (!matchedEvent) {
-        failed++;
-        errors.push(`${m.id}: match not found in The Odds API`);
-        continue;
-      }
-
-      const picked = calculateAverageOdds(matchedEvent);
-      if (!picked) {
-        failed++;
-        errors.push(`${m.id}: no h2h odds available`);
-        continue;
-      }
-
-      const minutesToKickoff = (new Date(m.kickoff_at).getTime() - Date.now()) / 60000;
-      const shouldLock = minutesToKickoff <= 30;
-
-      oddsToUpsert.push({
-        match_id: m.id,
-        odds_1: picked.odds_1,
-        odds_x: picked.odds_x,
-        odds_2: picked.odds_2,
-        bookmaker: picked.bookmaker,
-        source: "the-odds-api",
-        snapshot_at: new Date().toISOString(),
-        locked: shouldLock,
-      });
-    }
-
-    if (oddsToUpsert.length > 0) {
-      const { error: upsertErr } = await supabaseAdmin
-        .from("match_odds")
-        .upsert(oddsToUpsert, { onConflict: "match_id" });
-
-      if (upsertErr) {
-        failed += oddsToUpsert.length;
-        errors.push(`Database batch error: ${upsertErr.message}`);
-      } else {
-        updated += oddsToUpsert.length;
-      }
-    }
-
-    return { updated, failed, errors: errors.slice(0, 10) };
+    return performRefreshOdds();
   });
 
 // Admin: snapshot a single match's odds now (does not lock unless within 30 min).

@@ -234,39 +234,13 @@ async function rescorePredictions(matchIds: string[]) {
   if (matchIds.length === 0) return;
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  const [{ data: matches }, { data: preds }, { data: odds }] = await Promise.all([
-    supabaseAdmin
-      .from("matches")
-      .select("id, home_score, away_score")
-      .in("id", matchIds)
-      .not("home_score", "is", null),
-    supabaseAdmin.from("predictions").select("id, match_id, pick").in("match_id", matchIds),
-    supabaseAdmin
-      .from("match_odds")
-      .select("match_id, odds_1, odds_x, odds_2")
-      .in("match_id", matchIds),
-  ]);
-
-  const matchMap = new Map((matches ?? []).map((m) => [m.id, m]));
-  const oddsMap = new Map((odds ?? []).map((o) => [o.match_id, o]));
-
-  for (const p of preds ?? []) {
-    const m = matchMap.get(p.match_id);
-    if (!m || m.home_score === null || m.away_score === null) continue;
-
-    const actual = m.home_score > m.away_score ? "1" : m.home_score === m.away_score ? "X" : "2";
-    const isCorrect = p.pick === actual;
-
-    let oddsValue = 0;
-    const o = oddsMap.get(p.match_id);
-    if (o) {
-      if (p.pick === "1") oddsValue = Number(o.odds_1) || 0;
-      else if (p.pick === "X") oddsValue = Number(o.odds_x) || 0;
-      else if (p.pick === "2") oddsValue = Number(o.odds_2) || 0;
+  for (const matchId of matchIds) {
+    const { error } = await supabaseAdmin.rpc("recompute_predictions_for_match", {
+      _match_id: matchId,
+    });
+    if (error) {
+      console.error(`Error rescoring match ${matchId}:`, error.message);
     }
-
-    const points = isCorrect ? oddsValue : 0;
-    await supabaseAdmin.from("predictions").update({ points }).eq("id", p.id);
   }
 }
 
@@ -318,100 +292,104 @@ export const adminSetResult = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export async function performPollLive() {
+  const apiKey = import.meta.env.VITE_FOOTBALL_DATA_API_KEY || process.env.FOOTBALL_DATA_API_KEY;
+  if (!apiKey) {
+    return { ok: false, error: "FOOTBALL_DATA_API_KEY not set" };
+  }
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const res = await fetch("https://api.football-data.org/v4/competitions/WC/matches", {
+    headers: { "X-Auth-Token": apiKey },
+  });
+  if (!res.ok) return { ok: false, error: `football-data.org: ${res.status}` };
+  const json = (await res.json()) as {
+    matches: Array<{
+      utcDate: string;
+      status: string;
+      homeTeam: { name: string };
+      awayTeam: { name: string };
+      score: {
+        fullTime: { home: number | null; away: number | null };
+        halfTime: { home: number | null; away: number | null };
+      };
+    }>;
+  };
+  const candidates = (json.matches ?? []).map((m) => {
+    const date = m.utcDate.slice(0, 10);
+    return `${date}__${[m.homeTeam.name, m.awayTeam.name].sort().join("__vs__")}`;
+  });
+
+  if (candidates.length === 0) return { ok: true, updated: 0 };
+
+  const { data: existingMatches } = await supabaseAdmin
+    .from("matches")
+    .select("id, match_key, stage, matchday, kickoff_at, venue, home_team, away_team")
+    .in("match_key", candidates);
+
+  if (!existingMatches || existingMatches.length === 0) {
+    return { ok: true, updated: 0 };
+  }
+
+  const updatesToUpsert: import("./../integrations/supabase/types").Database["public"]["Tables"]["matches"]["Insert"][] =
+    [];
+  let updated = 0;
+
+  for (const m of json.matches ?? []) {
+    const date = m.utcDate.slice(0, 10);
+    const matchKeyStr = `${date}__${[m.homeTeam.name, m.awayTeam.name].sort().join("__vs__")}`;
+
+    const existing = existingMatches.find((e) => e.match_key === matchKeyStr);
+    if (!existing) continue;
+
+    const status =
+      m.status === "FINISHED"
+        ? "finished"
+        : m.status === "IN_PLAY" || m.status === "PAUSED"
+          ? "live"
+          : "scheduled";
+
+    let winner = null;
+    if (
+      m.status === "FINISHED" &&
+      m.score.fullTime.home !== null &&
+      m.score.fullTime.away !== null
+    ) {
+      if (m.score.fullTime.home > m.score.fullTime.away) winner = existing.home_team;
+      else if (m.score.fullTime.away > m.score.fullTime.home) winner = existing.away_team;
+      else winner = "draw";
+    }
+
+    updatesToUpsert.push({
+      ...existing,
+      home_score: m.score.fullTime.home,
+      away_score: m.score.fullTime.away,
+      home_score_ht: m.score.halfTime.home,
+      away_score_ht: m.score.halfTime.away,
+      status,
+      ...(winner ? { winner } : {}),
+    });
+    updated++;
+  }
+
+  if (updatesToUpsert.length > 0) {
+    await supabaseAdmin.from("matches").upsert(updatesToUpsert, { onConflict: "id" });
+
+    // Rescore predictions for all updated finished matches
+    const finishedIds = updatesToUpsert
+      .filter((u) => u.status === "finished" && u.home_score !== null)
+      .map((u) => u.id!)
+      .filter(Boolean);
+    await rescorePredictions(finishedIds);
+  }
+  return { ok: true, updated };
+}
+
 // ---- Admin: pull live updates from football-data.org (FIFA World Cup 2026, comp 2000) ----
 export const adminPollLive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.userId);
-    const apiKey = import.meta.env.VITE_FOOTBALL_DATA_API_KEY || process.env.FOOTBALL_DATA_API_KEY;
-    if (!apiKey) {
-      return { ok: false, error: "FOOTBALL_DATA_API_KEY not set" };
-    }
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const res = await fetch("https://api.football-data.org/v4/competitions/WC/matches", {
-      headers: { "X-Auth-Token": apiKey },
-    });
-    if (!res.ok) return { ok: false, error: `football-data.org: ${res.status}` };
-    const json = (await res.json()) as {
-      matches: Array<{
-        utcDate: string;
-        status: string;
-        homeTeam: { name: string };
-        awayTeam: { name: string };
-        score: {
-          fullTime: { home: number | null; away: number | null };
-          halfTime: { home: number | null; away: number | null };
-        };
-      }>;
-    };
-    const candidates = (json.matches ?? []).map((m) => {
-      const date = m.utcDate.slice(0, 10);
-      return `${date}__${[m.homeTeam.name, m.awayTeam.name].sort().join("__vs__")}`;
-    });
-
-    if (candidates.length === 0) return { ok: true, updated: 0 };
-
-    const { data: existingMatches } = await supabaseAdmin
-      .from("matches")
-      .select("id, match_key, stage, matchday, kickoff_at, venue, home_team, away_team")
-      .in("match_key", candidates);
-
-    if (!existingMatches || existingMatches.length === 0) {
-      return { ok: true, updated: 0 };
-    }
-
-    const updatesToUpsert: import("./../integrations/supabase/types").Database["public"]["Tables"]["matches"]["Insert"][] =
-      [];
-    let updated = 0;
-
-    for (const m of json.matches ?? []) {
-      const date = m.utcDate.slice(0, 10);
-      const matchKeyStr = `${date}__${[m.homeTeam.name, m.awayTeam.name].sort().join("__vs__")}`;
-
-      const existing = existingMatches.find((e) => e.match_key === matchKeyStr);
-      if (!existing) continue;
-
-      const status =
-        m.status === "FINISHED"
-          ? "finished"
-          : m.status === "IN_PLAY" || m.status === "PAUSED"
-            ? "live"
-            : "scheduled";
-
-      let winner = null;
-      if (
-        m.status === "FINISHED" &&
-        m.score.fullTime.home !== null &&
-        m.score.fullTime.away !== null
-      ) {
-        if (m.score.fullTime.home > m.score.fullTime.away) winner = existing.home_team;
-        else if (m.score.fullTime.away > m.score.fullTime.home) winner = existing.away_team;
-        else winner = "draw";
-      }
-
-      updatesToUpsert.push({
-        ...existing,
-        home_score: m.score.fullTime.home,
-        away_score: m.score.fullTime.away,
-        home_score_ht: m.score.halfTime.home,
-        away_score_ht: m.score.halfTime.away,
-        status,
-        ...(winner ? { winner } : {}),
-      });
-      updated++;
-    }
-
-    if (updatesToUpsert.length > 0) {
-      await supabaseAdmin.from("matches").upsert(updatesToUpsert, { onConflict: "id" });
-
-      // Rescore predictions for all updated finished matches
-      const finishedIds = updatesToUpsert
-        .filter((u) => u.status === "finished" && u.home_score !== null)
-        .map((u) => u.id!)
-        .filter(Boolean);
-      await rescorePredictions(finishedIds);
-    }
-    return { ok: true, updated };
+    return performPollLive();
   });
 
 // ---- Admin: manually insert a historical bet for a user ----

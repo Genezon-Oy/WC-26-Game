@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as ApiCronRouteImport } from './routes/api/cron'
 import { Route as AuthenticatedTeamsRouteImport } from './routes/_authenticated/teams'
 import { Route as AuthenticatedSaannotRouteImport } from './routes/_authenticated/saannot'
 import { Route as AuthenticatedResultsRouteImport } from './routes/_authenticated/results'
@@ -43,6 +44,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiCronRoute = ApiCronRouteImport.update({
+  id: '/api/cron',
+  path: '/api/cron',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedTeamsRoute = AuthenticatedTeamsRouteImport.update({
   id: '/teams',
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/results': typeof AuthenticatedResultsRoute
   '/saannot': typeof AuthenticatedSaannotRoute
   '/teams': typeof AuthenticatedTeamsRouteWithChildren
+  '/api/cron': typeof ApiCronRoute
   '/fixtures/$matchId': typeof AuthenticatedFixturesMatchIdRoute
   '/players/$playerId': typeof AuthenticatedPlayersPlayerIdRoute
   '/teams/$team': typeof AuthenticatedTeamsTeamRoute
@@ -169,6 +176,7 @@ export interface FileRoutesByTo {
   '/results': typeof AuthenticatedResultsRoute
   '/saannot': typeof AuthenticatedSaannotRoute
   '/teams': typeof AuthenticatedTeamsRouteWithChildren
+  '/api/cron': typeof ApiCronRoute
   '/': typeof AuthenticatedIndexRoute
   '/fixtures/$matchId': typeof AuthenticatedFixturesMatchIdRoute
   '/players/$playerId': typeof AuthenticatedPlayersPlayerIdRoute
@@ -192,6 +200,7 @@ export interface FileRoutesById {
   '/_authenticated/results': typeof AuthenticatedResultsRoute
   '/_authenticated/saannot': typeof AuthenticatedSaannotRoute
   '/_authenticated/teams': typeof AuthenticatedTeamsRouteWithChildren
+  '/api/cron': typeof ApiCronRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/fixtures/$matchId': typeof AuthenticatedFixturesMatchIdRoute
   '/_authenticated/players/$playerId': typeof AuthenticatedPlayersPlayerIdRoute
@@ -216,6 +225,7 @@ export interface FileRouteTypes {
     | '/results'
     | '/saannot'
     | '/teams'
+    | '/api/cron'
     | '/fixtures/$matchId'
     | '/players/$playerId'
     | '/teams/$team'
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
     | '/results'
     | '/saannot'
     | '/teams'
+    | '/api/cron'
     | '/'
     | '/fixtures/$matchId'
     | '/players/$playerId'
@@ -257,6 +268,7 @@ export interface FileRouteTypes {
     | '/_authenticated/results'
     | '/_authenticated/saannot'
     | '/_authenticated/teams'
+    | '/api/cron'
     | '/_authenticated/'
     | '/_authenticated/fixtures/$matchId'
     | '/_authenticated/players/$playerId'
@@ -270,6 +282,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiCronRoute: typeof ApiCronRoute
   ApiPublicSeedAdminRoute: typeof ApiPublicSeedAdminRoute
 }
 
@@ -295,6 +308,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/cron': {
+      id: '/api/cron'
+      path: '/api/cron'
+      fullPath: '/api/cron'
+      preLoaderRoute: typeof ApiCronRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/teams': {
       id: '/_authenticated/teams'
@@ -484,6 +504,7 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiCronRoute: ApiCronRoute,
   ApiPublicSeedAdminRoute: ApiPublicSeedAdminRoute,
 }
 export const routeTree = rootRouteImport
