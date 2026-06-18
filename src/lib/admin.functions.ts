@@ -213,12 +213,21 @@ export async function performSyncFixtures() {
   if (mErr) throw new Error(`Matches upsert: ${mErr.message}`);
 
   if (upsertedMatches) {
-    const idsToRescore = upsertedMatches
+    const idsWithResults = upsertedMatches
       .filter((m) => m.home_score !== null)
       .map((m) => m.id);
     
-    if (idsToRescore.length > 0) {
-      await rescorePredictions(idsToRescore);
+    // Force-lock odds for any match that now has results
+    if (idsWithResults.length > 0) {
+      await supabaseAdmin
+        .from("match_odds")
+        .update({ locked: true })
+        .in("match_id", idsWithResults)
+        .eq("locked", false);
+    }
+
+    if (idsWithResults.length > 0) {
+      await rescorePredictions(idsWithResults);
     }
   }
 
@@ -387,12 +396,21 @@ export async function performPollLive() {
   if (updatesToUpsert.length > 0) {
     await supabaseAdmin.from("matches").upsert(updatesToUpsert, { onConflict: "id" });
 
-    // Rescore predictions for all updated matches (both live and finished)
-    const idsToRescore = updatesToUpsert
+    // Force-lock odds for any match that now has scores
+    const idsWithScores = updatesToUpsert
       .filter((u) => u.home_score !== null)
       .map((u) => u.id!)
       .filter(Boolean);
-    await rescorePredictions(idsToRescore);
+    if (idsWithScores.length > 0) {
+      await supabaseAdmin
+        .from("match_odds")
+        .update({ locked: true })
+        .in("match_id", idsWithScores)
+        .eq("locked", false);
+    }
+
+    // Rescore predictions for all updated matches (both live and finished)
+    await rescorePredictions(idsWithScores);
   }
   return { ok: true, updated };
 }
