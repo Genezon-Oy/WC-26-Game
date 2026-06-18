@@ -213,12 +213,12 @@ export async function performSyncFixtures() {
   if (mErr) throw new Error(`Matches upsert: ${mErr.message}`);
 
   if (upsertedMatches) {
-    const finishedIds = upsertedMatches
-      .filter((m) => m.status === "finished" && m.home_score !== null)
+    const idsToRescore = upsertedMatches
+      .filter((m) => m.home_score !== null)
       .map((m) => m.id);
     
-    if (finishedIds.length > 0) {
-      await rescorePredictions(finishedIds);
+    if (idsToRescore.length > 0) {
+      await rescorePredictions(idsToRescore);
     }
   }
 
@@ -387,12 +387,12 @@ export async function performPollLive() {
   if (updatesToUpsert.length > 0) {
     await supabaseAdmin.from("matches").upsert(updatesToUpsert, { onConflict: "id" });
 
-    // Rescore predictions for all updated finished matches
-    const finishedIds = updatesToUpsert
-      .filter((u) => u.status === "finished" && u.home_score !== null)
+    // Rescore predictions for all updated matches (both live and finished)
+    const idsToRescore = updatesToUpsert
+      .filter((u) => u.home_score !== null)
       .map((u) => u.id!)
       .filter(Boolean);
-    await rescorePredictions(finishedIds);
+    await rescorePredictions(idsToRescore);
   }
   return { ok: true, updated };
 }
