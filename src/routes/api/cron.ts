@@ -30,8 +30,12 @@ export const Route = createFileRoute("/api/cron")({
           });
         }
         
-        const [oddsResult, liveResult, syncResult] = await Promise.all([
-          performRefreshOdds().catch((e) => ({ error: (e as Error).message })),
+        // 1. FIRST: Fetch & lock odds (must complete before score updates)
+        const oddsResult = await performRefreshOdds()
+          .catch((e) => ({ error: (e as Error).message }));
+        
+        // 2. THEN: Fetch scores (odds are now locked, rescoring will see them)
+        const [liveResult, syncResult] = await Promise.all([
           performPollLive().catch((e) => ({ error: (e as Error).message })),
           performSyncFixtures().catch((e) => ({ error: (e as Error).message }))
         ]);

@@ -220,7 +220,7 @@ export async function performRefreshOdds() {
     .from("matches")
     .select("id, kickoff_at, home_team, away_team, match_odds:match_odds(locked)")
     .lte("kickoff_at", horizonIso)
-    .gte("kickoff_at", new Date(Date.now() - 3 * 3600_000).toISOString()) // include very recent kickoffs
+    .gte("kickoff_at", new Date(Date.now() - 24 * 3600_000).toISOString()) // include recent kickoffs (24h lookback)
     .order("kickoff_at", { ascending: true })
     .limit(60);
 
