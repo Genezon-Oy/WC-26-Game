@@ -163,70 +163,74 @@ export const adminListUsers = createServerFn({ method: "GET" })
     }));
   });
 
+export async function performSyncFixtures() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const res = await fetch(OPENFOOTBALL_URL, { headers: { "User-Agent": "wc-predictor" } });
+  if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+  const data = (await res.json()) as OFData;
+
+  // Upsert teams
+  const teams = uniqueTeams(data.matches).map((t) => ({
+    name: t.name,
+    group_code: t.group_code,
+    flag_emoji: FLAGS[t.name] ?? null,
+  }));
+  const { error: tErr } = await supabaseAdmin.from("teams").upsert(teams, { onConflict: "name" });
+  if (tErr) throw new Error(`Teams upsert: ${tErr.message}`);
+
+  // Upsert matches
+  const rows = data.matches.map((m) => {
+    const stage = inferStage(m.round);
+    const winner = m.score?.ft
+      ? m.score.ft[0] > m.score.ft[1]
+        ? m.team1
+        : m.score.ft[1] > m.score.ft[0]
+          ? m.team2
+          : "draw"
+      : null;
+    return {
+      match_key: matchKey(m),
+      stage,
+      group_code: m.group ? m.group.replace(/^Group\s+/i, "") : null,
+      matchday: m.round,
+      kickoff_at: toKickoffISO(m.date, m.time),
+      venue: m.ground ?? null,
+      home_team: m.team1,
+      away_team: m.team2,
+      home_score: m.score?.ft?.[0] ?? null,
+      away_score: m.score?.ft?.[1] ?? null,
+      home_score_ht: m.score?.ht?.[0] ?? null,
+      away_score_ht: m.score?.ht?.[1] ?? null,
+      status: m.score?.ft ? "finished" : "scheduled",
+      winner,
+    };
+  });
+  const { data: upsertedMatches, error: mErr } = await supabaseAdmin
+    .from("matches")
+    .upsert(rows, { onConflict: "match_key" })
+    .select("id, status, home_score");
+  if (mErr) throw new Error(`Matches upsert: ${mErr.message}`);
+
+  if (upsertedMatches) {
+    const finishedIds = upsertedMatches
+      .filter((m) => m.status === "finished" && m.home_score !== null)
+      .map((m) => m.id);
+    
+    if (finishedIds.length > 0) {
+      await rescorePredictions(finishedIds);
+    }
+  }
+
+  return { teams: teams.length, matches: rows.length };
+}
+
 // ---- Admin: sync fixtures from openfootball ----
 export const adminSyncFixtures = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const res = await fetch(OPENFOOTBALL_URL, { headers: { "User-Agent": "wc-predictor" } });
-    if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-    const data = (await res.json()) as OFData;
-
-    // Upsert teams
-    const teams = uniqueTeams(data.matches).map((t) => ({
-      name: t.name,
-      group_code: t.group_code,
-      flag_emoji: FLAGS[t.name] ?? null,
-    }));
-    const { error: tErr } = await supabaseAdmin.from("teams").upsert(teams, { onConflict: "name" });
-    if (tErr) throw new Error(`Teams upsert: ${tErr.message}`);
-
-    // Upsert matches
-    const rows = data.matches.map((m) => {
-      const stage = inferStage(m.round);
-      const winner = m.score?.ft
-        ? m.score.ft[0] > m.score.ft[1]
-          ? m.team1
-          : m.score.ft[1] > m.score.ft[0]
-            ? m.team2
-            : "draw"
-        : null;
-      return {
-        match_key: matchKey(m),
-        stage,
-        group_code: m.group ? m.group.replace(/^Group\s+/i, "") : null,
-        matchday: m.round,
-        kickoff_at: toKickoffISO(m.date, m.time),
-        venue: m.ground ?? null,
-        home_team: m.team1,
-        away_team: m.team2,
-        home_score: m.score?.ft?.[0] ?? null,
-        away_score: m.score?.ft?.[1] ?? null,
-        home_score_ht: m.score?.ht?.[0] ?? null,
-        away_score_ht: m.score?.ht?.[1] ?? null,
-        status: m.score?.ft ? "finished" : "scheduled",
-        winner,
-      };
-    });
-    const { data: upsertedMatches, error: mErr } = await supabaseAdmin
-      .from("matches")
-      .upsert(rows, { onConflict: "match_key" })
-      .select("id, status, home_score");
-    if (mErr) throw new Error(`Matches upsert: ${mErr.message}`);
-
-    if (upsertedMatches) {
-      const finishedIds = upsertedMatches
-        .filter((m) => m.status === "finished" && m.home_score !== null)
-        .map((m) => m.id);
-      
-      if (finishedIds.length > 0) {
-        await rescorePredictions(finishedIds);
-      }
-    }
-
-    return { teams: teams.length, matches: rows.length };
+    return performSyncFixtures();
   });
 
 // ---- Helper: recalculate prediction points for given match IDs ----

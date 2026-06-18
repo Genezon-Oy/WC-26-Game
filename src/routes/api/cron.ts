@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { performRefreshOdds } from "@/lib/odds.functions";
-import { performPollLive } from "@/lib/admin.functions";
+import { performPollLive, performSyncFixtures } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/api/cron")({
   server: {
@@ -30,15 +30,17 @@ export const Route = createFileRoute("/api/cron")({
           });
         }
         
-        const [oddsResult, liveResult] = await Promise.all([
+        const [oddsResult, liveResult, syncResult] = await Promise.all([
           performRefreshOdds().catch((e) => ({ error: (e as Error).message })),
-          performPollLive().catch((e) => ({ error: (e as Error).message }))
+          performPollLive().catch((e) => ({ error: (e as Error).message })),
+          performSyncFixtures().catch((e) => ({ error: (e as Error).message }))
         ]);
         
         return new Response(JSON.stringify({
             ok: true,
             odds: oddsResult,
-            live: liveResult
+            live: liveResult,
+            sync: syncResult
         }), {
           status: 200,
           headers: { "content-type": "application/json" },
