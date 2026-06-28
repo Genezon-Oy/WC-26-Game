@@ -540,7 +540,7 @@ export async function performSyncScorers() {
   }
   
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const res = await fetch("https://api.football-data.org/v4/competitions/WC/scorers", {
+  const res = await fetch("https://api.football-data.org/v4/competitions/WC/scorers?limit=500", {
     headers: { "X-Auth-Token": apiKey },
   });
   if (!res.ok) return { ok: false, error: `football-data.org: ${res.status}` };
