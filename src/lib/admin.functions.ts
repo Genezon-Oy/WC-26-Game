@@ -306,7 +306,7 @@ export const adminSetResult = createServerFn({ method: "POST" })
   });
 
 export async function performPollLive() {
-  const apiKey = import.meta.env.VITE_FOOTBALL_DATA_API_KEY || process.env.FOOTBALL_DATA_API_KEY;
+  const apiKey = (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_FOOTBALL_DATA_API_KEY : undefined) || process.env.FOOTBALL_DATA_API_KEY || process.env.VITE_FOOTBALL_DATA_API_KEY;
   if (!apiKey) {
     return { ok: false, error: "FOOTBALL_DATA_API_KEY not set" };
   }
@@ -319,6 +319,7 @@ export async function performPollLive() {
     matches: Array<{
       utcDate: string;
       status: string;
+      stage: string;
       homeTeam: { name: string };
       awayTeam: { name: string };
       score: {
@@ -334,14 +335,25 @@ export async function performPollLive() {
 
   if (candidates.length === 0) return { ok: true, updated: 0 };
 
+  // Collect teams to upsert just in case they are missing
+  const teamsToUpsert = Array.from(
+    new Set(
+      (json.matches ?? []).flatMap((m) => [m.homeTeam.name, m.awayTeam.name])
+    )
+  ).map((name) => ({
+    name,
+    flag_emoji: FLAGS[name] ?? null,
+  }));
+  if (teamsToUpsert.length > 0) {
+    await supabaseAdmin.from("teams").upsert(teamsToUpsert, { onConflict: "name" });
+  }
+
   const { data: existingMatches } = await supabaseAdmin
     .from("matches")
     .select("id, match_key, stage, matchday, kickoff_at, venue, home_team, away_team, home_score, away_score, status")
     .in("match_key", candidates);
 
-  if (!existingMatches || existingMatches.length === 0) {
-    return { ok: true, updated: 0 };
-  }
+  const existingMap = new Map((existingMatches ?? []).map((m) => [m.match_key, m]));
 
   const updatesToUpsert: import("./../integrations/supabase/types").Database["public"]["Tables"]["matches"]["Insert"][] =
     [];
@@ -351,8 +363,7 @@ export async function performPollLive() {
     const date = m.utcDate.slice(0, 10);
     const matchKeyStr = `${date}__${[m.homeTeam.name, m.awayTeam.name].sort().join("__vs__")}`;
 
-    const existing = existingMatches.find((e) => e.match_key === matchKeyStr);
-    if (!existing) continue;
+    const existing = existingMap.get(matchKeyStr);
 
     const status =
       m.status === "FINISHED"
@@ -361,56 +372,98 @@ export async function performPollLive() {
           ? "live"
           : "scheduled";
 
-    // Only update if something actually changed
-    if (
-      existing.status === status &&
-      existing.home_score === m.score.fullTime.home &&
-      existing.away_score === m.score.fullTime.away
-    ) {
-      continue;
-    }
-
     let winner = null;
     if (
       m.status === "FINISHED" &&
       m.score.fullTime.home !== null &&
       m.score.fullTime.away !== null
     ) {
-      if (m.score.fullTime.home > m.score.fullTime.away) winner = existing.home_team;
-      else if (m.score.fullTime.away > m.score.fullTime.home) winner = existing.away_team;
+      if (m.score.fullTime.home > m.score.fullTime.away) winner = m.homeTeam.name;
+      else if (m.score.fullTime.away > m.score.fullTime.home) winner = m.awayTeam.name;
       else winner = "draw";
     }
 
-    updatesToUpsert.push({
-      ...existing,
-      home_score: m.score.fullTime.home,
-      away_score: m.score.fullTime.away,
-      home_score_ht: m.score.halfTime.home,
-      away_score_ht: m.score.halfTime.away,
-      status,
-      ...(winner ? { winner } : {}),
-    });
+    if (existing) {
+      // Only update if something actually changed
+      if (
+        existing.status === status &&
+        existing.home_score === m.score.fullTime.home &&
+        existing.away_score === m.score.fullTime.away
+      ) {
+        continue;
+      }
+
+      updatesToUpsert.push({
+        ...existing,
+        home_score: m.score.fullTime.home,
+        away_score: m.score.fullTime.away,
+        home_score_ht: m.score.halfTime.home,
+        away_score_ht: m.score.halfTime.away,
+        status,
+        ...(winner ? { winner } : {}),
+      });
+    } else {
+      // New match missing from DB! Insert it.
+      let stage = "group";
+      if (m.stage === "FINAL") stage = "final";
+      else if (m.stage === "THIRD_PLACE") stage = "third-place";
+      else if (m.stage === "SEMI_FINALS") stage = "semi-final";
+      else if (m.stage === "QUARTER_FINALS") stage = "quarter-final";
+      else if (m.stage === "LAST_16") stage = "round-of-16";
+      else if (m.stage === "LAST_32") stage = "round-of-32";
+
+      let matchday = "Knockout";
+      if (stage === "round-of-32") matchday = "Round of 32";
+      if (stage === "round-of-16") matchday = "Round of 16";
+      if (stage === "quarter-final") matchday = "Quarter-finals";
+      if (stage === "semi-final") matchday = "Semi-finals";
+      if (stage === "final") matchday = "Final";
+
+      updatesToUpsert.push({
+        match_key: matchKeyStr,
+        stage,
+        matchday,
+        kickoff_at: m.utcDate,
+        venue: null,
+        home_team: m.homeTeam.name,
+        away_team: m.awayTeam.name,
+        home_score: m.score.fullTime.home,
+        away_score: m.score.fullTime.away,
+        home_score_ht: m.score.halfTime.home,
+        away_score_ht: m.score.halfTime.away,
+        status,
+        ...(winner ? { winner } : {}),
+      });
+    }
     updated++;
   }
 
   if (updatesToUpsert.length > 0) {
-    await supabaseAdmin.from("matches").upsert(updatesToUpsert, { onConflict: "id" });
+    await supabaseAdmin.from("matches").upsert(updatesToUpsert, { onConflict: "match_key" });
 
-    // Force-lock odds for any match that now has scores
-    const idsWithScores = updatesToUpsert
-      .filter((u) => u.home_score !== null)
-      .map((u) => u.id!)
-      .filter(Boolean);
-    if (idsWithScores.length > 0) {
-      await supabaseAdmin
-        .from("match_odds")
-        .update({ locked: true })
-        .in("match_id", idsWithScores)
-        .eq("locked", false);
+    const { data: newlyUpserted } = await supabaseAdmin
+      .from("matches")
+      .select("id, home_score")
+      .in("match_key", updatesToUpsert.map(u => u.match_key));
+
+    if (newlyUpserted) {
+      // Force-lock odds for any match that now has scores
+      const idsWithScores = newlyUpserted
+        .filter((u) => u.home_score !== null)
+        .map((u) => u.id!)
+        .filter(Boolean);
+        
+      if (idsWithScores.length > 0) {
+        await supabaseAdmin
+          .from("match_odds")
+          .update({ locked: true })
+          .in("match_id", idsWithScores)
+          .eq("locked", false);
+      }
+
+      // Rescore predictions for all updated matches (both live and finished)
+      await rescorePredictions(idsWithScores);
     }
-
-    // Rescore predictions for all updated matches (both live and finished)
-    await rescorePredictions(idsWithScores);
   }
   return { ok: true, updated };
 }
