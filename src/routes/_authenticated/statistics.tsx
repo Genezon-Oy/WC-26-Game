@@ -20,7 +20,7 @@ function StatisticsPage() {
         .select("*")
         .order("goals", { ascending: false })
         .order("assists", { ascending: false })
-        .limit(50);
+        .limit(100);
       if (error) throw error;
       return data;
     },
@@ -116,7 +116,7 @@ function StatisticsPage() {
                   <Skeleton className="h-64 w-full rounded-b-xl" />
                 ) : (
                   <ul className="divide-y divide-border/50">
-                    {playersQuery.data?.slice(0, 10).map((p, i) => (
+                    {playersQuery.data?.slice(0, 50).map((p, i) => (
                       <li key={p.id} className="flex items-center justify-between p-4 hover:bg-accent/30 transition-colors">
                         <div className="flex items-center gap-4">
                           <span className={`w-6 text-center font-bold ${i === 0 ? 'text-yellow-500' : i === 1 ? 'text-slate-400' : i === 2 ? 'text-amber-600' : 'text-muted-foreground'}`}>
@@ -152,7 +152,7 @@ function StatisticsPage() {
                   <Skeleton className="h-64 w-full rounded-b-xl" />
                 ) : (
                   <ul className="divide-y divide-border/50">
-                    {[...(playersQuery.data || [])].sort((a, b) => b.assists - a.assists).slice(0, 10).map((p, i) => (
+                    {[...(playersQuery.data || [])].sort((a, b) => b.assists - a.assists).slice(0, 50).map((p, i) => (
                       <li key={p.id} className="flex items-center justify-between p-4 hover:bg-accent/30 transition-colors">
                         <div className="flex items-center gap-4">
                           <span className="w-6 text-center font-bold text-muted-foreground">{i + 1}.</span>
