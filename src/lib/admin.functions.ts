@@ -318,6 +318,7 @@ export async function performPollLive() {
       "Congo DR": "DR Congo",
       "Bosnia-Herzegovina": "Bosnia & Herzegovina",
       "Cape Verde Islands": "Cape Verde",
+      "Czechia": "Czech Republic",
     };
     return map[name] || name;
   };
