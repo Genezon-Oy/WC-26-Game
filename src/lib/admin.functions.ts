@@ -310,6 +310,18 @@ export async function performPollLive() {
   if (!apiKey) {
     return { ok: false, error: "FOOTBALL_DATA_API_KEY not set" };
   }
+
+  const normalizeTeamName = (name: string | null) => {
+    if (!name) return null;
+    const map: Record<string, string> = {
+      "United States": "USA",
+      "Congo DR": "DR Congo",
+      "Bosnia-Herzegovina": "Bosnia & Herzegovina",
+      "Cape Verde Islands": "Cape Verde",
+    };
+    return map[name] || name;
+  };
+
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const res = await fetch("https://api.football-data.org/v4/competitions/WC/matches", {
     headers: { "X-Auth-Token": apiKey },
@@ -328,7 +340,13 @@ export async function performPollLive() {
       };
     }>;
   };
-  const candidates = (json.matches ?? []).map((m) => {
+  const validMatches = (json.matches ?? []).map(m => ({
+    ...m,
+    homeTeam: { ...m.homeTeam, name: normalizeTeamName(m.homeTeam?.name) },
+    awayTeam: { ...m.awayTeam, name: normalizeTeamName(m.awayTeam?.name) },
+  })).filter((m) => m.homeTeam.name && m.awayTeam.name);
+
+  const candidates = validMatches.map((m) => {
     const date = m.utcDate.slice(0, 10);
     return `${date}__${[m.homeTeam.name, m.awayTeam.name].sort().join("__vs__")}`;
   });
@@ -338,11 +356,11 @@ export async function performPollLive() {
   // Collect teams to upsert just in case they are missing
   const teamsToUpsert = Array.from(
     new Set(
-      (json.matches ?? []).flatMap((m) => [m.homeTeam.name, m.awayTeam.name])
+      validMatches.flatMap((m) => [m.homeTeam.name, m.awayTeam.name])
     )
-  ).map((name) => ({
-    name,
-    flag_emoji: FLAGS[name] ?? null,
+  ).filter(Boolean).map((name) => ({
+    name: name as string,
+    flag_emoji: FLAGS[name as string] ?? null,
   }));
   if (teamsToUpsert.length > 0) {
     await supabaseAdmin.from("teams").upsert(teamsToUpsert, { onConflict: "name" });
@@ -359,7 +377,7 @@ export async function performPollLive() {
     [];
   let updated = 0;
 
-  for (const m of json.matches ?? []) {
+  for (const m of validMatches) {
     const date = m.utcDate.slice(0, 10);
     const matchKeyStr = `${date}__${[m.homeTeam.name, m.awayTeam.name].sort().join("__vs__")}`;
 
