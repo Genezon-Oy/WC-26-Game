@@ -347,12 +347,7 @@ export async function performPollLive() {
     awayTeam: { ...m.awayTeam, name: normalizeTeamName(m.awayTeam?.name) },
   })).filter((m) => m.homeTeam.name && m.awayTeam.name);
 
-  const candidates = validMatches.map((m) => {
-    const date = m.utcDate.slice(0, 10);
-    return `${date}__${[m.homeTeam.name, m.awayTeam.name].sort().join("__vs__")}`;
-  });
-
-  if (candidates.length === 0) return { ok: true, updated: 0 };
+  if (validMatches.length === 0) return { ok: true, updated: 0 };
 
   // Collect teams to upsert just in case they are missing
   const teamsToUpsert = Array.from(
@@ -369,10 +364,7 @@ export async function performPollLive() {
 
   const { data: existingMatches } = await supabaseAdmin
     .from("matches")
-    .select("id, match_key, stage, matchday, kickoff_at, venue, home_team, away_team, home_score, away_score, status")
-    .in("match_key", candidates);
-
-  const existingMap = new Map((existingMatches ?? []).map((m) => [m.match_key, m]));
+    .select("id, match_key, stage, matchday, kickoff_at, venue, home_team, away_team, home_score, away_score, status");
 
   const updatesToUpsert: import("./../integrations/supabase/types").Database["public"]["Tables"]["matches"]["Insert"][] =
     [];
@@ -382,7 +374,13 @@ export async function performPollLive() {
     const date = m.utcDate.slice(0, 10);
     const matchKeyStr = `${date}__${[m.homeTeam.name, m.awayTeam.name].sort().join("__vs__")}`;
 
-    const existing = existingMap.get(matchKeyStr);
+    const existing = (existingMatches ?? []).find(e => {
+      const sameTeams = (e.home_team === m.homeTeam.name && e.away_team === m.awayTeam.name) ||
+                        (e.home_team === m.awayTeam.name && e.away_team === m.homeTeam.name);
+      if (!sameTeams) return false;
+      const timeDiff = Math.abs(new Date(e.kickoff_at).getTime() - new Date(m.utcDate).getTime());
+      return timeDiff < 48 * 60 * 60 * 1000;
+    });
 
     const status =
       m.status === "FINISHED"
