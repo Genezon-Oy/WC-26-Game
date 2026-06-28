@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { flag } from "@/lib/flags";
+import { Flag } from "@/components/Flag";
 import { Trophy, Swords, Shield, Target, Goal, Award } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -122,7 +122,7 @@ function StatisticsPage() {
                           <span className={`w-6 text-center font-bold ${i === 0 ? 'text-yellow-500' : i === 1 ? 'text-slate-400' : i === 2 ? 'text-amber-600' : 'text-muted-foreground'}`}>
                             {i + 1}.
                           </span>
-                          <span className="text-2xl drop-shadow-sm">{flag(p.team_name)}</span>
+                          <span className="drop-shadow-sm"><Flag name={p.team_name} className="w-8 h-auto rounded-sm" /></span>
                           <div>
                             <p className="font-semibold">{p.player_name}</p>
                             <p className="text-xs text-muted-foreground">{p.team_name}</p>
@@ -156,7 +156,7 @@ function StatisticsPage() {
                       <li key={p.id} className="flex items-center justify-between p-4 hover:bg-accent/30 transition-colors">
                         <div className="flex items-center gap-4">
                           <span className="w-6 text-center font-bold text-muted-foreground">{i + 1}.</span>
-                          <span className="text-2xl drop-shadow-sm">{flag(p.team_name)}</span>
+                          <span className="drop-shadow-sm"><Flag name={p.team_name} className="w-8 h-auto rounded-sm" /></span>
                           <div>
                             <p className="font-semibold">{p.player_name}</p>
                             <p className="text-xs text-muted-foreground">{p.team_name}</p>
@@ -185,7 +185,7 @@ function StatisticsPage() {
                 <ul className="space-y-3">
                   {teamStats.topScorers.map((t, i) => (
                     <li key={t.team} className="flex justify-between items-center">
-                      <span className="flex gap-2 items-center"><span className="text-muted-foreground w-4">{i+1}.</span>{flag(t.team)} {t.team}</span>
+                      <span className="flex gap-2 items-center"><span className="text-muted-foreground w-4">{i+1}.</span><Flag name={t.team} className="w-5 h-auto rounded-sm" /> {t.team}</span>
                       <span className="font-bold">{t.scored}</span>
                     </li>
                   ))}
@@ -201,7 +201,7 @@ function StatisticsPage() {
                 <ul className="space-y-3">
                   {teamStats.mostConceded.map((t, i) => (
                     <li key={t.team} className="flex justify-between items-center">
-                      <span className="flex gap-2 items-center"><span className="text-muted-foreground w-4">{i+1}.</span>{flag(t.team)} {t.team}</span>
+                      <span className="flex gap-2 items-center"><span className="text-muted-foreground w-4">{i+1}.</span><Flag name={t.team} className="w-5 h-auto rounded-sm" /> {t.team}</span>
                       <span className="font-bold">{t.conceded}</span>
                     </li>
                   ))}
@@ -217,7 +217,7 @@ function StatisticsPage() {
                 <ul className="space-y-3">
                   {teamStats.cleanSheets.filter(t => t.cleanSheets > 0).slice(0, 5).map((t, i) => (
                     <li key={t.team} className="flex justify-between items-center">
-                      <span className="flex gap-2 items-center"><span className="text-muted-foreground w-4">{i+1}.</span>{flag(t.team)} {t.team}</span>
+                      <span className="flex gap-2 items-center"><span className="text-muted-foreground w-4">{i+1}.</span><Flag name={t.team} className="w-5 h-auto rounded-sm" /> {t.team}</span>
                       <span className="font-bold">{t.cleanSheets}</span>
                     </li>
                   ))}
@@ -238,7 +238,7 @@ function StatisticsPage() {
                   {matchStats.highestScoring.map((m, i) => (
                     <li key={i} className="flex justify-between items-center p-2 rounded-lg hover:bg-accent/20">
                       <div className="flex items-center gap-2">
-                        {flag(m.home_team)} {m.home_team} - {m.away_team} {flag(m.away_team)}
+                        <Flag name={m.home_team} className="w-5 h-auto rounded-sm" /> {m.home_team} - {m.away_team} <Flag name={m.away_team} className="w-5 h-auto rounded-sm" />
                       </div>
                       <span className="font-bold text-lg px-2 py-1 bg-accent/40 rounded">{m.totalGoals} <span className="text-xs font-normal text-muted-foreground">maalia</span></span>
                     </li>
@@ -256,7 +256,7 @@ function StatisticsPage() {
                   {matchStats.biggestBlowouts.map((m, i) => (
                     <li key={i} className="flex justify-between items-center p-2 rounded-lg hover:bg-accent/20">
                       <div className="flex items-center gap-2">
-                        {flag(m.home_team)} {m.match} {flag(m.away_team)}
+                        <Flag name={m.home_team} className="w-5 h-auto rounded-sm" /> {m.match} <Flag name={m.away_team} className="w-5 h-auto rounded-sm" />
                       </div>
                       <span className="font-bold text-lg px-2 py-1 bg-accent/40 rounded">+{m.diff} <span className="text-xs font-normal text-muted-foreground">ero</span></span>
                     </li>
