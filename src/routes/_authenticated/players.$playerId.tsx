@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AvatarView } from "@/components/AvatarUpload";
 import { Trophy, Target, TrendingUp, Medal, Star } from "lucide-react";
 import { Flag } from "@/components/Flag";
+import { flagCode } from "@/lib/flags";
 import { MatchCard, type PredictionDisplay } from "@/components/MatchCard";
 import { useMemo } from "react";
 
@@ -189,7 +190,6 @@ function FutureCard({ label, value, players }: { label: string; value: string | 
   
   if (value) {
     // If we can't find a flag code for this string, it might be a player
-    const { flagCode } = require("@/lib/flags");
     if (!flagCode(value)) {
       const p = players.find((p) => p.player_name.toLowerCase().includes(value.toLowerCase()) || value.toLowerCase().includes(p.player_name.toLowerCase()));
       if (p) {
