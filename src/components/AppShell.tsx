@@ -14,6 +14,7 @@ import {
   LayoutGrid,
   CheckSquare,
   BookOpen,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -28,6 +29,7 @@ const NAV = [
   { to: "/veikkaa", label: "Veikkaa" },
   { to: "/futures", label: "Futures" },
   { to: "/leaderboard", label: "Tulostaulu" },
+  { to: "/statistics", label: "Tilastot" },
   { to: "/saannot", label: "Säännöt" },
 ] as const;
 
@@ -45,6 +47,7 @@ const MORE_TABS = [
   { to: "/groups", label: "Lohkot", icon: LayoutGrid },
   { to: "/teams", label: "Joukkueet", icon: Users },
   { to: "/futures", label: "Futures", icon: PenLine },
+  { to: "/statistics", label: "Tilastot", icon: BarChart3 },
   { to: "/saannot", label: "Säännöt", icon: BookOpen },
 ] as const;
 

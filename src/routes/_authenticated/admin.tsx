@@ -13,6 +13,7 @@ import {
   adminGetResults,
   adminSetResults,
   adminSetHistoricalBet,
+  adminSyncScorers,
 } from "@/lib/admin.functions";
 import { adminRefreshOdds, adminLockKickoffOdds, adminSetManualOdds } from "@/lib/odds.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +50,7 @@ function AdminPage() {
   const poll = useServerFn(adminPollLive);
   const refreshOdds = useServerFn(adminRefreshOdds);
   const lockOdds = useServerFn(adminLockKickoffOdds);
+  const syncScorers = useServerFn(adminSyncScorers);
 
   const users = useQuery({ queryKey: ["admin-users"], queryFn: () => list() });
 
@@ -67,6 +69,15 @@ function AdminPage() {
       r.ok
         ? toast.success(`Päivitetty ${r.updated} live-ottelua`)
         : toast.error(r.error ?? "Live-haku ei käytettävissä"),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const syncScorersMut = useMutation({
+    mutationFn: () => syncScorers(),
+    onSuccess: (r) =>
+      r.ok
+        ? toast.success(`Päivitetty ${r.updated} maalintekijää`)
+        : toast.error(r.error ?? "Maalintekijöiden haku epäonnistui"),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -208,6 +219,9 @@ function AdminPage() {
           </Button>
           <Button variant="secondary" onClick={() => pollMut.mutate()} disabled={pollMut.isPending}>
             {pollMut.isPending ? "Haetaan…" : "Päivitä live-tulokset"}
+          </Button>
+          <Button variant="secondary" onClick={() => syncScorersMut.mutate()} disabled={syncScorersMut.isPending}>
+            {syncScorersMut.isPending ? "Haetaan…" : "Päivitä tilastot (maalit/syötöt)"}
           </Button>
         </div>
       </section>

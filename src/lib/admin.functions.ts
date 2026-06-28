@@ -531,3 +531,57 @@ export const adminSetHistoricalBet = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
+
+// ---- Admin: Sync Player Stats (Scorers & Assists) ----
+export async function performSyncScorers() {
+  const apiKey = (typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_FOOTBALL_DATA_API_KEY : undefined) || process.env.FOOTBALL_DATA_API_KEY || process.env.VITE_FOOTBALL_DATA_API_KEY;
+  if (!apiKey) {
+    return { ok: false, error: "FOOTBALL_DATA_API_KEY not set" };
+  }
+  
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const res = await fetch("https://api.football-data.org/v4/competitions/WC/scorers", {
+    headers: { "X-Auth-Token": apiKey },
+  });
+  if (!res.ok) return { ok: false, error: `football-data.org: ${res.status}` };
+  
+  const json = await res.json();
+  if (!json.scorers) return { ok: true, updated: 0 };
+
+  const normalizeTeamName = (name: string | null) => {
+    if (!name) return null;
+    const map: Record<string, string> = {
+      "United States": "USA",
+      "Congo DR": "DR Congo",
+      "Bosnia-Herzegovina": "Bosnia & Herzegovina",
+      "Cape Verde Islands": "Cape Verde",
+      "Czechia": "Czech Republic",
+    };
+    return map[name] || name;
+  };
+
+  const updates = json.scorers.map((s: any) => ({
+    api_player_id: s.player.id,
+    player_name: s.player.name,
+    team_name: normalizeTeamName(s.team.name),
+    goals: s.goals || 0,
+    assists: s.assists || 0,
+    penalties: s.penalties || 0,
+    played_matches: s.playedMatches || 0,
+    updated_at: new Date().toISOString(),
+  }));
+
+  if (updates.length > 0) {
+    const { error } = await supabaseAdmin.from("player_stats").upsert(updates, { onConflict: "api_player_id" });
+    if (error) return { ok: false, error: error.message };
+  }
+
+  return { ok: true, updated: updates.length };
+}
+
+export const adminSyncScorers = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    return performSyncScorers();
+  });
