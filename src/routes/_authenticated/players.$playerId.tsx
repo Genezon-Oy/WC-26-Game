@@ -5,6 +5,7 @@ import { getLeaderboard, getPlayerDetails } from "@/lib/predictions.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { AvatarView } from "@/components/AvatarUpload";
 import { Trophy, Target, TrendingUp, Medal, Star } from "lucide-react";
+import { flag } from "@/lib/flags";
 import { MatchCard, type PredictionDisplay } from "@/components/MatchCard";
 import { useMemo } from "react";
 
@@ -20,14 +21,15 @@ function PlayerProfilePage() {
   const { data, isLoading } = useQuery({
     queryKey: ["player-profile", playerId],
     queryFn: async () => {
-      const [lb, details, { data: matches }] = await Promise.all([
+      const [lb, details, { data: matches }, { data: players }] = await Promise.all([
         fetchLeaderboard(),
         fetchDetails({ data: { target_user_id: playerId } }),
         supabase.from("matches").select("*").order("kickoff_at", { ascending: false }),
+        supabase.from("player_stats").select("player_name, team_name")
       ]);
       const lbUser = lb.find((u) => u.id === playerId);
       const rank = lb.findIndex((u) => u.id === playerId) + 1;
-      return { lbUser, rank, details, matches: matches ?? [] };
+      return { lbUser, rank, details, matches: matches ?? [], players: players ?? [] };
     },
   });
 
@@ -50,7 +52,7 @@ function PlayerProfilePage() {
     return <div className="text-destructive font-semibold">Pelaajaa ei löytynyt.</div>;
   }
 
-  const { lbUser, rank, details, matches } = data;
+  const { lbUser, rank, details, matches, players } = data;
   const { profile, futures } = details;
   const displayName = profile.display_name || profile.username;
 
@@ -118,15 +120,20 @@ function PlayerProfilePage() {
         </h2>
         {futures ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            <FutureCard label="Mestari" value={futures.winner} />
-            <FutureCard label="Maalikuningas" value={futures.golden_boot} />
-            <FutureCard label="Syöttökuningas" value={futures.most_assists} />
+            <FutureCard label="Mestari" value={futures.winner} players={players} />
+            <FutureCard label="Maalikuningas" value={futures.golden_boot} players={players} />
+            <FutureCard label="Syöttökuningas" value={futures.most_assists} players={players} />
             <div className="rounded-2xl border border-border/60 bg-card/50 p-4 flex flex-col justify-center">
               <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Välierissä</div>
               <ul className="text-sm font-semibold space-y-1">
-                {futures.semi_finalists?.map((t: string, i: number) => (
-                  <li key={i}>• {t || "-"}</li>
-                ))}
+                {futures.semi_finalists?.map((t: string, i: number) => {
+                  const f = flag(t);
+                  return (
+                    <li key={i} className="flex items-center gap-1.5">
+                      • {f !== "🏳️" ? <span className="text-lg leading-none drop-shadow-sm">{f}</span> : null} {t || "-"}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </div>
@@ -178,11 +185,33 @@ function PlayerProfilePage() {
   );
 }
 
-function FutureCard({ label, value }: { label: string; value: string | null }) {
+function FutureCard({ label, value, players }: { label: string; value: string | null; players: any[] }) {
+  let f = "🏳️";
+  if (value) {
+    // If it's a team name
+    f = flag(value);
+    // If flag not found, try to find player
+    if (f === "🏳️") {
+      const p = players.find((p) => p.player_name.toLowerCase().includes(value.toLowerCase()) || value.toLowerCase().includes(p.player_name.toLowerCase()));
+      if (p) {
+        f = flag(p.team_name);
+      }
+    }
+  }
+
   return (
     <div className="rounded-2xl border border-border/60 bg-card/50 p-4 flex flex-col justify-center">
       <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">{label}</div>
-      <div className="font-semibold text-lg">{value || <span className="text-muted-foreground/50">-</span>}</div>
+      <div className="font-semibold text-lg flex items-center gap-2">
+        {value ? (
+          <>
+            {f !== "🏳️" && <span className="text-2xl leading-none drop-shadow-sm">{f}</span>}
+            <span className="line-clamp-1" title={value}>{value}</span>
+          </>
+        ) : (
+          <span className="text-muted-foreground/50">-</span>
+        )}
+      </div>
     </div>
   );
 }
