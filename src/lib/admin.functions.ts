@@ -23,6 +23,18 @@ function usernameToEmail(username: string): string {
   return `${username.trim().toLowerCase()}@league.local`;
 }
 
+export function normalizeTeamName(name: string | null): string | null {
+  if (!name) return null;
+  const map: Record<string, string> = {
+    "United States": "USA",
+    "Congo DR": "DR Congo",
+    "Bosnia-Herzegovina": "Bosnia & Herzegovina",
+    "Cape Verde Islands": "Cape Verde",
+    "Czechia": "Czech Republic",
+  };
+  return map[name] || name;
+}
+
 export const adminGetResults = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -170,34 +182,60 @@ export async function performSyncFixtures() {
   if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
   const data = (await res.json()) as OFData;
 
+  const { data: existingMatches } = await supabaseAdmin
+    .from("matches")
+    .select("match_key, kickoff_at, home_team, away_team");
+
   // Upsert teams
-  const teams = uniqueTeams(data.matches).map((t) => ({
-    name: t.name,
-    group_code: t.group_code,
-    flag_emoji: FLAGS[t.name] ?? null,
-  }));
+  const teamsMap = new Map<string, any>();
+  for (const t of uniqueTeams(data.matches)) {
+    const norm = normalizeTeamName(t.name) as string;
+    if (!teamsMap.has(norm)) {
+      teamsMap.set(norm, {
+        name: norm,
+        group_code: t.group_code,
+        flag_emoji: FLAGS[norm] ?? null,
+      });
+    }
+  }
+  const teams = Array.from(teamsMap.values());
   const { error: tErr } = await supabaseAdmin.from("teams").upsert(teams, { onConflict: "name" });
   if (tErr) throw new Error(`Teams upsert: ${tErr.message}`);
 
   // Upsert matches
   const rows = data.matches.map((m) => {
     const stage = inferStage(m.round);
+    const t1 = normalizeTeamName(m.team1) as string;
+    const t2 = normalizeTeamName(m.team2) as string;
+    const kickoff = toKickoffISO(m.date, m.time);
+
+    // Check if match already exists (to avoid duplicates from timezone differences)
+    const existing = (existingMatches ?? []).find(e => {
+      const sameTeams = (e.home_team === t1 && e.away_team === t2) ||
+                        (e.home_team === t2 && e.away_team === t1);
+      if (!sameTeams) return false;
+      const timeDiff = Math.abs(new Date(e.kickoff_at).getTime() - new Date(kickoff).getTime());
+      return timeDiff < 48 * 60 * 60 * 1000; // 48 hours
+    });
+
+    const mKey = existing ? existing.match_key : matchKey({ ...m, team1: t1, team2: t2 });
+
     const winner = m.score?.ft
       ? m.score.ft[0] > m.score.ft[1]
-        ? m.team1
+        ? t1
         : m.score.ft[1] > m.score.ft[0]
-          ? m.team2
+          ? t2
           : "draw"
       : null;
     return {
-      match_key: matchKey(m),
+      match_key: mKey,
       stage,
       group_code: m.group ? m.group.replace(/^Group\s+/i, "") : null,
       matchday: m.round,
-      kickoff_at: toKickoffISO(m.date, m.time),
+      kickoff_at: kickoff,
       venue: m.ground ?? null,
-      home_team: m.team1,
-      away_team: m.team2,
+      home_team: t1,
+      away_team: t2,
       home_score: m.score?.ft?.[0] ?? null,
       away_score: m.score?.ft?.[1] ?? null,
       home_score_ht: m.score?.ht?.[0] ?? null,
@@ -310,18 +348,6 @@ export async function performPollLive() {
   if (!apiKey) {
     return { ok: false, error: "FOOTBALL_DATA_API_KEY not set" };
   }
-
-  const normalizeTeamName = (name: string | null) => {
-    if (!name) return null;
-    const map: Record<string, string> = {
-      "United States": "USA",
-      "Congo DR": "DR Congo",
-      "Bosnia-Herzegovina": "Bosnia & Herzegovina",
-      "Cape Verde Islands": "Cape Verde",
-      "Czechia": "Czech Republic",
-    };
-    return map[name] || name;
-  };
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const res = await fetch("https://api.football-data.org/v4/competitions/WC/matches", {
@@ -545,18 +571,6 @@ export async function performSyncScorers() {
   
   const json = await res.json();
   if (!json.scorers) return { ok: true, updated: 0 };
-
-  const normalizeTeamName = (name: string | null) => {
-    if (!name) return null;
-    const map: Record<string, string> = {
-      "United States": "USA",
-      "Congo DR": "DR Congo",
-      "Bosnia-Herzegovina": "Bosnia & Herzegovina",
-      "Cape Verde Islands": "Cape Verde",
-      "Czechia": "Czech Republic",
-    };
-    return map[name] || name;
-  };
 
   const updates = json.scorers.map((s: any) => ({
     api_player_id: s.player.id,
