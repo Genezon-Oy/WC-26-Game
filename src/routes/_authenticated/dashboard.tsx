@@ -187,7 +187,7 @@ function Dashboard() {
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {data.upcomingList.slice(1, 7).map((m) => (
+            {data.upcomingList.slice(1).map((m) => (
               <MatchCard key={m.id} match={m} prediction={data.predictions.get(m.id)} />
             ))}
           </div>
