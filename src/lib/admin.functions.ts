@@ -240,6 +240,10 @@ export async function performSyncFixtures() {
       away_score: m.score?.ft?.[1] ?? null,
       home_score_ht: m.score?.ht?.[0] ?? null,
       away_score_ht: m.score?.ht?.[1] ?? null,
+      home_score_et: m.score?.et?.[0] ?? null,
+      away_score_et: m.score?.et?.[1] ?? null,
+      home_score_pen: m.score?.p?.[0] ?? null,
+      away_score_pen: m.score?.p?.[1] ?? null,
       status: m.score?.ft ? "finished" : "scheduled",
       winner,
     };
@@ -306,6 +310,10 @@ export const adminSetResult = createServerFn({ method: "POST" })
         away_score: z.number().int().min(0).max(20),
         home_score_ht: z.number().int().min(0).max(20).nullable().optional(),
         away_score_ht: z.number().int().min(0).max(20).nullable().optional(),
+        home_score_et: z.number().int().min(0).max(20).nullable().optional(),
+        away_score_et: z.number().int().min(0).max(20).nullable().optional(),
+        home_score_pen: z.number().int().min(0).max(20).nullable().optional(),
+        away_score_pen: z.number().int().min(0).max(20).nullable().optional(),
       })
       .parse(input),
   )
@@ -331,6 +339,10 @@ export const adminSetResult = createServerFn({ method: "POST" })
         away_score: data.away_score,
         home_score_ht: data.home_score_ht ?? null,
         away_score_ht: data.away_score_ht ?? null,
+        home_score_et: data.home_score_et ?? null,
+        away_score_et: data.away_score_et ?? null,
+        home_score_pen: data.home_score_pen ?? null,
+        away_score_pen: data.away_score_pen ?? null,
         status: "finished",
         winner,
       })
@@ -364,6 +376,9 @@ export async function performPollLive() {
       score: {
         fullTime: { home: number | null; away: number | null };
         halfTime: { home: number | null; away: number | null };
+        regularTime?: { home: number | null; away: number | null };
+        extraTime?: { home: number | null; away: number | null };
+        penalties?: { home: number | null; away: number | null };
       };
     }>;
   };
@@ -415,14 +430,17 @@ export async function performPollLive() {
           ? "live"
           : "scheduled";
 
+    const homeScore = m.score.regularTime?.home ?? m.score.fullTime.home;
+    const awayScore = m.score.regularTime?.away ?? m.score.fullTime.away;
+
     let winner = null;
     if (
       m.status === "FINISHED" &&
-      m.score.fullTime.home !== null &&
-      m.score.fullTime.away !== null
+      homeScore !== null &&
+      awayScore !== null
     ) {
-      if (m.score.fullTime.home > m.score.fullTime.away) winner = m.homeTeam.name;
-      else if (m.score.fullTime.away > m.score.fullTime.home) winner = m.awayTeam.name;
+      if (homeScore > awayScore) winner = m.homeTeam.name;
+      else if (awayScore > homeScore) winner = m.awayTeam.name;
       else winner = "draw";
     }
 
@@ -430,18 +448,22 @@ export async function performPollLive() {
       // Only update if something actually changed
       if (
         existing.status === status &&
-        existing.home_score === m.score.fullTime.home &&
-        existing.away_score === m.score.fullTime.away
+        existing.home_score === homeScore &&
+        existing.away_score === awayScore
       ) {
         continue;
       }
 
       updatesToUpsert.push({
         ...existing,
-        home_score: m.score.fullTime.home,
-        away_score: m.score.fullTime.away,
+        home_score: homeScore,
+        away_score: awayScore,
         home_score_ht: m.score.halfTime.home,
         away_score_ht: m.score.halfTime.away,
+        home_score_et: m.score.extraTime?.home ?? null,
+        away_score_et: m.score.extraTime?.away ?? null,
+        home_score_pen: m.score.penalties?.home ?? null,
+        away_score_pen: m.score.penalties?.away ?? null,
         status,
         ...(winner ? { winner } : {}),
       });
@@ -470,10 +492,14 @@ export async function performPollLive() {
         venue: null,
         home_team: m.homeTeam.name as string,
         away_team: m.awayTeam.name as string,
-        home_score: m.score.fullTime.home,
-        away_score: m.score.fullTime.away,
+        home_score: homeScore,
+        away_score: awayScore,
         home_score_ht: m.score.halfTime.home,
         away_score_ht: m.score.halfTime.away,
+        home_score_et: m.score.extraTime?.home ?? null,
+        away_score_et: m.score.extraTime?.away ?? null,
+        home_score_pen: m.score.penalties?.home ?? null,
+        away_score_pen: m.score.penalties?.away ?? null,
         status,
         ...(winner ? { winner } : {}),
       });

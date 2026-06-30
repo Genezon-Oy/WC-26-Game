@@ -64,8 +64,17 @@ function MatchDetail() {
             <Flag name={m.home_team} className="w-20 h-auto mx-auto" />
             <div className="mt-2 font-semibold">{m.home_team}</div>
           </div>
-          <div className="text-center text-5xl font-bold tabular-nums">
-            {finished ? `${m.home_score} – ${m.away_score}` : "vs"}
+          <div className="text-center text-5xl font-bold tabular-nums flex flex-col items-center">
+            <div>
+              {finished ? `${m.home_score} – ${m.away_score}` : "vs"}
+            </div>
+            {(m.home_score_et !== null && m.home_score_et !== undefined) && (
+              <div className="text-sm text-muted-foreground font-semibold mt-2">
+                {m.home_score_pen !== null && m.home_score_pen !== undefined
+                  ? `RP: ${m.home_score_pen}-${m.away_score_pen}`
+                  : `JA: ${m.home_score_et}-${m.away_score_et}`}
+              </div>
+            )}
           </div>
           <div className="text-center">
             <Flag name={m.away_team} className="w-20 h-auto mx-auto" />

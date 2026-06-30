@@ -13,6 +13,10 @@ export interface MatchCardData {
   away_team: string;
   home_score: number | null;
   away_score: number | null;
+  home_score_et?: number | null;
+  away_score_et?: number | null;
+  home_score_pen?: number | null;
+  away_score_pen?: number | null;
   kickoff_at: string;
   venue: string | null;
   status: string;
@@ -69,10 +73,19 @@ export function MatchCard({
           </div>
           <div className="text-center">
             {isFinished ? (
-              <div className="text-3xl font-bold tabular-nums text-foreground">
-                {match.home_score}
-                <span className="text-muted-foreground mx-1">–</span>
-                {match.away_score}
+              <div className="text-3xl font-bold tabular-nums text-foreground flex flex-col items-center">
+                <div>
+                  {match.home_score}
+                  <span className="text-muted-foreground mx-1">–</span>
+                  {match.away_score}
+                </div>
+                {(match.home_score_et !== null && match.home_score_et !== undefined) && (
+                  <div className="text-[10px] text-muted-foreground font-semibold mt-0.5">
+                    {match.home_score_pen !== null && match.home_score_pen !== undefined
+                      ? `RP: ${match.home_score_pen}-${match.away_score_pen}`
+                      : `JA: ${match.home_score_et}-${match.away_score_et}`}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-sm font-semibold text-muted-foreground">vs</div>

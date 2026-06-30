@@ -529,7 +529,15 @@ function ResultEntry({
   qc,
 }: {
   setResult: (args: {
-    data: { match_id: string; home_score: number; away_score: number };
+    data: {
+      match_id: string;
+      home_score: number;
+      away_score: number;
+      home_score_et?: number;
+      away_score_et?: number;
+      home_score_pen?: number;
+      away_score_pen?: number;
+    };
   }) => Promise<unknown>;
   qc: ReturnType<typeof useQueryClient>;
 }) {
@@ -548,6 +556,10 @@ function ResultEntry({
   const [matchId, setMatchId] = useState("");
   const [home, setHome] = useState("");
   const [away, setAway] = useState("");
+  const [homeEt, setHomeEt] = useState("");
+  const [awayEt, setAwayEt] = useState("");
+  const [homePen, setHomePen] = useState("");
+  const [awayPen, setAwayPen] = useState("");
 
   const mut = useMutation({
     mutationFn: () =>
@@ -556,6 +568,10 @@ function ResultEntry({
           match_id: matchId,
           home_score: parseInt(home, 10),
           away_score: parseInt(away, 10),
+          home_score_et: homeEt !== "" ? parseInt(homeEt, 10) : undefined,
+          away_score_et: awayEt !== "" ? parseInt(awayEt, 10) : undefined,
+          home_score_pen: homePen !== "" ? parseInt(homePen, 10) : undefined,
+          away_score_pen: awayPen !== "" ? parseInt(awayPen, 10) : undefined,
         },
       }),
     onSuccess: () => {
@@ -563,6 +579,10 @@ function ResultEntry({
       setMatchId("");
       setHome("");
       setAway("");
+      setHomeEt("");
+      setAwayEt("");
+      setHomePen("");
+      setAwayPen("");
       qc.invalidateQueries();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -592,22 +612,72 @@ function ResultEntry({
             ))}
           </select>
         </div>
-        <Input
-          type="number"
-          min={0}
-          max={20}
-          value={home}
-          onChange={(e) => setHome(e.target.value)}
-          className="w-20"
-        />
-        <Input
-          type="number"
-          min={0}
-          max={20}
-          value={away}
-          onChange={(e) => setAway(e.target.value)}
-          className="w-20"
-        />
+        <div className="flex flex-col gap-1 items-center">
+          <Label>Koti 90min</Label>
+          <Input
+            type="number"
+            min={0}
+            max={20}
+            value={home}
+            onChange={(e) => setHome(e.target.value)}
+            className="w-20"
+          />
+        </div>
+        <div className="flex flex-col gap-1 items-center">
+          <Label>Vieras 90min</Label>
+          <Input
+            type="number"
+            min={0}
+            max={20}
+            value={away}
+            onChange={(e) => setAway(e.target.value)}
+            className="w-20"
+          />
+        </div>
+        <div className="flex flex-col gap-1 items-center">
+          <Label>Koti JA</Label>
+          <Input
+            type="number"
+            min={0}
+            max={20}
+            value={homeEt}
+            onChange={(e) => setHomeEt(e.target.value)}
+            className="w-20"
+          />
+        </div>
+        <div className="flex flex-col gap-1 items-center">
+          <Label>Vieras JA</Label>
+          <Input
+            type="number"
+            min={0}
+            max={20}
+            value={awayEt}
+            onChange={(e) => setAwayEt(e.target.value)}
+            className="w-20"
+          />
+        </div>
+        <div className="flex flex-col gap-1 items-center">
+          <Label>Koti RP</Label>
+          <Input
+            type="number"
+            min={0}
+            max={20}
+            value={homePen}
+            onChange={(e) => setHomePen(e.target.value)}
+            className="w-20"
+          />
+        </div>
+        <div className="flex flex-col gap-1 items-center">
+          <Label>Vieras RP</Label>
+          <Input
+            type="number"
+            min={0}
+            max={20}
+            value={awayPen}
+            onChange={(e) => setAwayPen(e.target.value)}
+            className="w-20"
+          />
+        </div>
         <Button
           onClick={() => mut.mutate()}
           disabled={!matchId || home === "" || away === "" || mut.isPending}
