@@ -38,7 +38,25 @@ function StatisticsPage() {
     },
   });
 
-  const isLoading = playersQuery.isLoading || matchesQuery.isLoading;
+  const futuresQuery = useQuery({
+    queryKey: ["futures-picks-with-users"],
+    queryFn: async () => {
+      const [futuresRes, profilesRes] = await Promise.all([
+        supabase.from("futures_picks").select("user_id, golden_boot, most_assists"),
+        supabase.from("profiles").select("id, username"),
+      ]);
+      if (futuresRes.error) throw futuresRes.error;
+      if (profilesRes.error) throw profilesRes.error;
+
+      const profileMap = new Map(profilesRes.data.map((p) => [p.id, p.username]));
+      return futuresRes.data.map((f) => ({
+        ...f,
+        username: profileMap.get(f.user_id) || "Tuntematon",
+      }));
+    },
+  });
+
+  const isLoading = playersQuery.isLoading || matchesQuery.isLoading || futuresQuery.isLoading;
 
   const getTeamStats = () => {
     if (!matchesQuery.data) return { topScorers: [], mostConceded: [], cleanSheets: [] };
@@ -46,7 +64,7 @@ function StatisticsPage() {
     matchesQuery.data.forEach((m) => {
       if (!stats[m.home_team]) stats[m.home_team] = { scored: 0, conceded: 0, cleanSheets: 0 };
       if (!stats[m.away_team]) stats[m.away_team] = { scored: 0, conceded: 0, cleanSheets: 0 };
-      
+
       stats[m.home_team].scored += m.home_score ?? 0;
       stats[m.home_team].conceded += m.away_score ?? 0;
       if (m.away_score === 0) stats[m.home_team].cleanSheets += 1;
@@ -66,7 +84,7 @@ function StatisticsPage() {
 
   const getMatchStats = () => {
     if (!matchesQuery.data) return { highestScoring: [], biggestBlowouts: [] };
-    const matches = matchesQuery.data.map(m => ({
+    const matches = matchesQuery.data.map((m) => ({
       match: `${m.home_team} ${m.home_score} - ${m.away_score} ${m.away_team}`,
       home_team: m.home_team,
       away_team: m.away_team,
@@ -90,15 +108,31 @@ function StatisticsPage() {
           Tilastot
         </h1>
         <p className="text-muted-foreground text-lg">
-          Kuka vie Kultaisen Kengän? Mitkä joukkueet tekevät eniten maaleja? Katso turnauksen kuumimmat tilastot.
+          Kuka vie Kultaisen Kengän? Mitkä joukkueet tekevät eniten maaleja? Katso turnauksen
+          kuumimmat tilastot.
         </p>
       </div>
 
       <Tabs defaultValue="players" className="w-full">
         <TabsList className="w-full sm:w-auto grid grid-cols-3 bg-card/60 backdrop-blur-md border border-border/50 p-1 h-12 rounded-xl">
-          <TabsTrigger value="players" className="rounded-lg h-9 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Pelaajat</TabsTrigger>
-          <TabsTrigger value="teams" className="rounded-lg h-9 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Joukkueet</TabsTrigger>
-          <TabsTrigger value="matches" className="rounded-lg h-9 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">Ottelut</TabsTrigger>
+          <TabsTrigger
+            value="players"
+            className="rounded-lg h-9 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+          >
+            Pelaajat
+          </TabsTrigger>
+          <TabsTrigger
+            value="teams"
+            className="rounded-lg h-9 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+          >
+            Joukkueet
+          </TabsTrigger>
+          <TabsTrigger
+            value="matches"
+            className="rounded-lg h-9 data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+          >
+            Ottelut
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="players" className="mt-6 space-y-6">
@@ -117,22 +151,69 @@ function StatisticsPage() {
                 ) : (
                   <ul className="divide-y divide-border/50">
                     {playersQuery.data?.slice(0, 50).map((p, i) => (
-                      <li key={p.id} className="flex items-center justify-between p-4 hover:bg-accent/30 transition-colors">
-                        <div className="flex items-center gap-4">
-                          <span className={`w-6 text-center font-bold ${i === 0 ? 'text-yellow-500' : i === 1 ? 'text-slate-400' : i === 2 ? 'text-amber-600' : 'text-muted-foreground'}`}>
-                            {i + 1}.
-                          </span>
-                          <span className="drop-shadow-sm"><Flag name={p.team_name} className="w-8 h-auto rounded-sm" /></span>
-                          <div>
-                            <p className="font-semibold">{p.player_name}</p>
-                            <p className="text-xs text-muted-foreground">{p.team_name}</p>
+                      <React.Fragment key={p.id}>
+                        <li className="flex items-center justify-between p-4 hover:bg-accent/30 transition-colors">
+                          <div className="flex items-center gap-4">
+                            <span
+                              className={`w-6 text-center font-bold ${i === 0 ? "text-yellow-500" : i === 1 ? "text-slate-400" : i === 2 ? "text-amber-600" : "text-muted-foreground"}`}
+                            >
+                              {i + 1}.
+                            </span>
+                            <span className="drop-shadow-sm">
+                              <Flag name={p.team_name} className="w-8 h-auto rounded-sm" />
+                            </span>
+                            <div>
+                              <p className="font-semibold">{p.player_name}</p>
+                              <p className="text-xs text-muted-foreground">{p.team_name}</p>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className="font-bold text-lg">{p.goals} <span className="text-xs font-normal text-muted-foreground">maalia</span></span>
-                          {p.assists > 0 && <span className="text-xs text-muted-foreground">({p.assists} syöttöä)</span>}
-                        </div>
-                      </li>
+                          <div className="flex flex-col items-end">
+                            <span className="font-bold text-lg">
+                              {p.goals}{" "}
+                              <span className="text-xs font-normal text-muted-foreground">
+                                maalia
+                              </span>
+                            </span>
+                            {p.assists > 0 && (
+                              <span className="text-xs text-muted-foreground">
+                                ({p.assists} syöttöä)
+                              </span>
+                            )}
+                          </div>
+                        </li>
+                        {(() => {
+                          const predictors = futuresQuery.data
+                            ?.filter(
+                              (f) =>
+                                f.golden_boot &&
+                                (p.player_name
+                                  .toLowerCase()
+                                  .includes(f.golden_boot.toLowerCase()) ||
+                                  f.golden_boot
+                                    .toLowerCase()
+                                    .includes(p.player_name.toLowerCase())),
+                            )
+                            .map((f) => f.username);
+                          if (predictors && predictors.length > 0) {
+                            return (
+                              <li className="px-4 pb-3 pt-0 text-xs text-muted-foreground bg-accent/10 flex flex-wrap gap-1">
+                                <span className="font-semibold text-primary/80">
+                                  Maalikuningas-veikkaukset:
+                                </span>
+                                {predictors.map((u) => (
+                                  <span
+                                    key={u}
+                                    className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-sm"
+                                  >
+                                    {u}
+                                  </span>
+                                ))}
+                              </li>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </React.Fragment>
                     ))}
                   </ul>
                 )}
@@ -152,22 +233,72 @@ function StatisticsPage() {
                   <Skeleton className="h-64 w-full rounded-b-xl" />
                 ) : (
                   <ul className="divide-y divide-border/50">
-                    {[...(playersQuery.data || [])].sort((a, b) => b.assists - a.assists).slice(0, 50).map((p, i) => (
-                      <li key={p.id} className="flex items-center justify-between p-4 hover:bg-accent/30 transition-colors">
-                        <div className="flex items-center gap-4">
-                          <span className="w-6 text-center font-bold text-muted-foreground">{i + 1}.</span>
-                          <span className="drop-shadow-sm"><Flag name={p.team_name} className="w-8 h-auto rounded-sm" /></span>
-                          <div>
-                            <p className="font-semibold">{p.player_name}</p>
-                            <p className="text-xs text-muted-foreground">{p.team_name}</p>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className="font-bold text-lg">{p.assists} <span className="text-xs font-normal text-muted-foreground">syöttöä</span></span>
-                          {p.goals > 0 && <span className="text-xs text-muted-foreground">({p.goals} maalia)</span>}
-                        </div>
-                      </li>
-                    ))}
+                    {[...(playersQuery.data || [])]
+                      .sort((a, b) => b.assists - a.assists)
+                      .slice(0, 50)
+                      .map((p, i) => (
+                        <React.Fragment key={p.id}>
+                          <li className="flex items-center justify-between p-4 hover:bg-accent/30 transition-colors">
+                            <div className="flex items-center gap-4">
+                              <span className="w-6 text-center font-bold text-muted-foreground">
+                                {i + 1}.
+                              </span>
+                              <span className="drop-shadow-sm">
+                                <Flag name={p.team_name} className="w-8 h-auto rounded-sm" />
+                              </span>
+                              <div>
+                                <p className="font-semibold">{p.player_name}</p>
+                                <p className="text-xs text-muted-foreground">{p.team_name}</p>
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end">
+                              <span className="font-bold text-lg">
+                                {p.assists}{" "}
+                                <span className="text-xs font-normal text-muted-foreground">
+                                  syöttöä
+                                </span>
+                              </span>
+                              {p.goals > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                  ({p.goals} maalia)
+                                </span>
+                              )}
+                            </div>
+                          </li>
+                          {(() => {
+                            const predictors = futuresQuery.data
+                              ?.filter(
+                                (f) =>
+                                  f.most_assists &&
+                                  (p.player_name
+                                    .toLowerCase()
+                                    .includes(f.most_assists.toLowerCase()) ||
+                                    f.most_assists
+                                      .toLowerCase()
+                                      .includes(p.player_name.toLowerCase())),
+                              )
+                              .map((f) => f.username);
+                            if (predictors && predictors.length > 0) {
+                              return (
+                                <li className="px-4 pb-3 pt-0 text-xs text-muted-foreground bg-accent/10 flex flex-wrap gap-1">
+                                  <span className="font-semibold text-primary/80">
+                                    Syöttökuningas-veikkaukset:
+                                  </span>
+                                  {predictors.map((u) => (
+                                    <span
+                                      key={u}
+                                      className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-sm"
+                                    >
+                                      {u}
+                                    </span>
+                                  ))}
+                                </li>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </React.Fragment>
+                      ))}
                   </ul>
                 )}
               </CardContent>
@@ -179,13 +310,18 @@ function StatisticsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Card className="border-border/50 bg-card/60 backdrop-blur-md">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-green-500"><Swords className="w-4 h-4" /> Eniten maaleja</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-green-500">
+                  <Swords className="w-4 h-4" /> Eniten maaleja
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
                   {teamStats.topScorers.map((t, i) => (
                     <li key={t.team} className="flex justify-between items-center">
-                      <span className="flex gap-2 items-center"><span className="text-muted-foreground w-4">{i+1}.</span><Flag name={t.team} className="w-5 h-auto rounded-sm" /> {t.team}</span>
+                      <span className="flex gap-2 items-center">
+                        <span className="text-muted-foreground w-4">{i + 1}.</span>
+                        <Flag name={t.team} className="w-5 h-auto rounded-sm" /> {t.team}
+                      </span>
                       <span className="font-bold">{t.scored}</span>
                     </li>
                   ))}
@@ -195,13 +331,18 @@ function StatisticsPage() {
 
             <Card className="border-border/50 bg-card/60 backdrop-blur-md">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-red-500"><Target className="w-4 h-4" /> Eniten päästettyjä</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-red-500">
+                  <Target className="w-4 h-4" /> Eniten päästettyjä
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
                   {teamStats.mostConceded.map((t, i) => (
                     <li key={t.team} className="flex justify-between items-center">
-                      <span className="flex gap-2 items-center"><span className="text-muted-foreground w-4">{i+1}.</span><Flag name={t.team} className="w-5 h-auto rounded-sm" /> {t.team}</span>
+                      <span className="flex gap-2 items-center">
+                        <span className="text-muted-foreground w-4">{i + 1}.</span>
+                        <Flag name={t.team} className="w-5 h-auto rounded-sm" /> {t.team}
+                      </span>
                       <span className="font-bold">{t.conceded}</span>
                     </li>
                   ))}
@@ -211,16 +352,24 @@ function StatisticsPage() {
 
             <Card className="border-border/50 bg-card/60 backdrop-blur-md">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-blue-500"><Shield className="w-4 h-4" /> Nollapelit</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-blue-500">
+                  <Shield className="w-4 h-4" /> Nollapelit
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
-                  {teamStats.cleanSheets.filter(t => t.cleanSheets > 0).slice(0, 5).map((t, i) => (
-                    <li key={t.team} className="flex justify-between items-center">
-                      <span className="flex gap-2 items-center"><span className="text-muted-foreground w-4">{i+1}.</span><Flag name={t.team} className="w-5 h-auto rounded-sm" /> {t.team}</span>
-                      <span className="font-bold">{t.cleanSheets}</span>
-                    </li>
-                  ))}
+                  {teamStats.cleanSheets
+                    .filter((t) => t.cleanSheets > 0)
+                    .slice(0, 5)
+                    .map((t, i) => (
+                      <li key={t.team} className="flex justify-between items-center">
+                        <span className="flex gap-2 items-center">
+                          <span className="text-muted-foreground w-4">{i + 1}.</span>
+                          <Flag name={t.team} className="w-5 h-auto rounded-sm" /> {t.team}
+                        </span>
+                        <span className="font-bold">{t.cleanSheets}</span>
+                      </li>
+                    ))}
                 </ul>
               </CardContent>
             </Card>
@@ -231,16 +380,26 @@ function StatisticsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="border-border/50 bg-card/60 backdrop-blur-md">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-orange-500"><Goal className="w-4 h-4" /> Runsasmaalisimmat ottelut</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-orange-500">
+                  <Goal className="w-4 h-4" /> Runsasmaalisimmat ottelut
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
                   {matchStats.highestScoring.map((m, i) => (
-                    <li key={i} className="flex justify-between items-center p-2 rounded-lg hover:bg-accent/20">
+                    <li
+                      key={i}
+                      className="flex justify-between items-center p-2 rounded-lg hover:bg-accent/20"
+                    >
                       <div className="flex items-center gap-2">
-                        <Flag name={m.home_team} className="w-5 h-auto rounded-sm" /> {m.home_team} - {m.away_team} <Flag name={m.away_team} className="w-5 h-auto rounded-sm" />
+                        <Flag name={m.home_team} className="w-5 h-auto rounded-sm" /> {m.home_team}{" "}
+                        - {m.away_team}{" "}
+                        <Flag name={m.away_team} className="w-5 h-auto rounded-sm" />
                       </div>
-                      <span className="font-bold text-lg px-2 py-1 bg-accent/40 rounded">{m.totalGoals} <span className="text-xs font-normal text-muted-foreground">maalia</span></span>
+                      <span className="font-bold text-lg px-2 py-1 bg-accent/40 rounded">
+                        {m.totalGoals}{" "}
+                        <span className="text-xs font-normal text-muted-foreground">maalia</span>
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -249,16 +408,25 @@ function StatisticsPage() {
 
             <Card className="border-border/50 bg-card/60 backdrop-blur-md">
               <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-purple-500"><Swords className="w-4 h-4" /> Suurimmat murskavoitot</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-purple-500">
+                  <Swords className="w-4 h-4" /> Suurimmat murskavoitot
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3">
                   {matchStats.biggestBlowouts.map((m, i) => (
-                    <li key={i} className="flex justify-between items-center p-2 rounded-lg hover:bg-accent/20">
+                    <li
+                      key={i}
+                      className="flex justify-between items-center p-2 rounded-lg hover:bg-accent/20"
+                    >
                       <div className="flex items-center gap-2">
-                        <Flag name={m.home_team} className="w-5 h-auto rounded-sm" /> {m.match} <Flag name={m.away_team} className="w-5 h-auto rounded-sm" />
+                        <Flag name={m.home_team} className="w-5 h-auto rounded-sm" /> {m.match}{" "}
+                        <Flag name={m.away_team} className="w-5 h-auto rounded-sm" />
                       </div>
-                      <span className="font-bold text-lg px-2 py-1 bg-accent/40 rounded">+{m.diff} <span className="text-xs font-normal text-muted-foreground">ero</span></span>
+                      <span className="font-bold text-lg px-2 py-1 bg-accent/40 rounded">
+                        +{m.diff}{" "}
+                        <span className="text-xs font-normal text-muted-foreground">ero</span>
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -266,7 +434,6 @@ function StatisticsPage() {
             </Card>
           </div>
         </TabsContent>
-
       </Tabs>
     </div>
   );
