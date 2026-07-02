@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { performRefreshOdds } from "@/lib/odds.functions";
-import { performPollLive, performSyncFixtures } from "@/lib/admin.functions";
+import { performPollLive, performSyncFixtures, performSyncScorers } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/api/cron")({
   server: {
@@ -35,16 +35,18 @@ export const Route = createFileRoute("/api/cron")({
           .catch((e) => ({ error: (e as Error).message }));
         
         // 2. THEN: Fetch scores (odds are now locked, rescoring will see them)
-        const [liveResult, syncResult] = await Promise.all([
+        const [liveResult, syncResult, scorersResult] = await Promise.all([
           performPollLive().catch((e) => ({ error: (e as Error).message })),
-          performSyncFixtures().catch((e) => ({ error: (e as Error).message }))
+          performSyncFixtures().catch((e) => ({ error: (e as Error).message })),
+          performSyncScorers().catch((e) => ({ error: (e as Error).message }))
         ]);
         
         return new Response(JSON.stringify({
             ok: true,
             odds: oddsResult,
             live: liveResult,
-            sync: syncResult
+            sync: syncResult,
+            scorers: scorersResult
         }), {
           status: 200,
           headers: { "content-type": "application/json" },

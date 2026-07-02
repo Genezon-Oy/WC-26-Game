@@ -31,6 +31,9 @@ export function normalizeTeamName(name: string | null): string | null {
     "Bosnia-Herzegovina": "Bosnia & Herzegovina",
     "Cape Verde Islands": "Cape Verde",
     "Czechia": "Czech Republic",
+    "Korea Republic": "South Korea",
+    "IR Iran": "Iran",
+    "Côte d'Ivoire": "Ivory Coast",
   };
   return map[name] || name;
 }
