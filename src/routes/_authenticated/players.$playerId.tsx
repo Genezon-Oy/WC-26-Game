@@ -212,6 +212,7 @@ function PlayerProfilePage() {
 
 const KNOWN_PLAYERS: Record<string, string> = {
   "bruno fernandes": "Portugal",
+  "michael olise": "France",
   "kylian mbappe": "France",
   "kylian mbappé": "France",
   "harry kane": "England",
