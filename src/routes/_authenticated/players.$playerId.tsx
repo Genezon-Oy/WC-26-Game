@@ -26,7 +26,7 @@ function PlayerProfilePage() {
         fetchLeaderboard(),
         fetchDetails({ data: { target_user_id: playerId } }),
         supabase.from("matches").select("*").order("kickoff_at", { ascending: false }),
-        supabase.from("player_stats").select("player_name, team_name")
+        supabase.from("player_stats").select("player_name, team_name"),
       ]);
       const lbUser = lb.find((u) => u.id === playerId);
       const rank = lb.findIndex((u) => u.id === playerId) + 1;
@@ -59,7 +59,7 @@ function PlayerProfilePage() {
 
   // Filter matches where user made a prediction or it's finished
   const userMatches = matches.filter((m) => predsMap.has(m.id));
-  
+
   // Sort: finished first, then scheduled. But we ordered by kickoff desc, which is good for past matches.
   // Actually, separating into "Upcoming" and "Past" might be nice.
   const now = new Date();
@@ -82,7 +82,7 @@ function PlayerProfilePage() {
         <div className="flex-1 text-center sm:text-left">
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight">{displayName}</h1>
           <p className="text-muted-foreground mt-1 text-lg">@{profile.username}</p>
-          
+
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="rounded-2xl bg-card/60 border border-border/50 p-4">
               <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1 flex items-center justify-center sm:justify-start gap-1.5">
@@ -94,20 +94,27 @@ function PlayerProfilePage() {
               <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1 flex items-center justify-center sm:justify-start gap-1.5">
                 <Trophy className="w-3.5 h-3.5" /> Yhteensä
               </div>
-              <div className="text-2xl font-bold tabular-nums text-primary">{lbUser.total.toFixed(2)} p</div>
+              <div className="text-2xl font-bold tabular-nums text-primary">
+                {lbUser.total.toFixed(2)} p
+              </div>
             </div>
             <div className="rounded-2xl bg-card/60 border border-border/50 p-4">
               <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1 flex items-center justify-center sm:justify-start gap-1.5">
                 <Target className="w-3.5 h-3.5" /> Osumat
               </div>
-              <div className="text-2xl font-bold tabular-nums">{lbUser.correct} / {lbUser.settled}</div>
+              <div className="text-2xl font-bold tabular-nums">
+                {lbUser.correct} / {lbUser.settled}
+              </div>
             </div>
             <div className="rounded-2xl bg-card/60 border border-border/50 p-4">
               <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1 flex items-center justify-center sm:justify-start gap-1.5">
                 <TrendingUp className="w-3.5 h-3.5" /> Matrix
               </div>
-              <div className={`text-2xl font-bold tabular-nums ${lbUser.matrix_bonus > 0 ? "text-emerald-500" : lbUser.matrix_bonus < 0 ? "text-destructive" : ""}`}>
-                {lbUser.matrix_bonus > 0 ? "+" : ""}{lbUser.matrix_bonus.toFixed(2)}
+              <div
+                className={`text-2xl font-bold tabular-nums ${lbUser.matrix_bonus > 0 ? "text-emerald-500" : lbUser.matrix_bonus < 0 ? "text-destructive" : ""}`}
+              >
+                {lbUser.matrix_bonus > 0 ? "+" : ""}
+                {lbUser.matrix_bonus.toFixed(2)}
               </div>
             </div>
           </div>
@@ -125,12 +132,15 @@ function PlayerProfilePage() {
             <FutureCard label="Maalikuningas" value={futures.golden_boot} players={players} />
             <FutureCard label="Syöttökuningas" value={futures.most_assists} players={players} />
             <div className="rounded-2xl border border-border/60 bg-card/50 p-4 flex flex-col justify-center">
-              <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">Välierissä</div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">
+                Välierissä
+              </div>
               <ul className="text-sm font-semibold space-y-2 mt-2">
                 {futures.semi_finalists?.map((t: string, i: number) => {
                   return (
                     <li key={i} className="flex items-center gap-2">
-                      <span className="text-muted-foreground">•</span> <Flag name={t} className="w-6 h-auto rounded-sm" /> {t || "-"}
+                      <span className="text-muted-foreground">•</span>{" "}
+                      <Flag name={t} className="w-6 h-auto rounded-sm" /> {t || "-"}
                     </li>
                   );
                 })}
@@ -185,27 +195,90 @@ function PlayerProfilePage() {
   );
 }
 
-function FutureCard({ label, value, players }: { label: string; value: string | null; players: any[] }) {
+const KNOWN_PLAYERS: Record<string, string> = {
+  "bruno fernandes": "Portugal",
+  "kylian mbappe": "France",
+  "kylian mbappé": "France",
+  "harry kane": "England",
+  "jude bellingham": "England",
+  "kevin de bruyne": "Belgium",
+  "cristiano ronaldo": "Portugal",
+  "lionel messi": "Argentina",
+  "vinicius junior": "Brazil",
+  "vinicius jr": "Brazil",
+  neymar: "Brazil",
+  "jamal musiala": "Germany",
+  "bukayo saka": "England",
+  "romelu lukaku": "Belgium",
+  "lamine yamal": "Spain",
+  "alvaro morata": "Spain",
+  "antoine griezmann": "France",
+  "cody gakpo": "Netherlands",
+  "rafael leao": "Portugal",
+  "rafael leão": "Portugal",
+  "phil foden": "England",
+  "bernardo silva": "Portugal",
+};
+
+function FutureCard({
+  label,
+  value,
+  players,
+}: {
+  label: string;
+  value: string | null;
+  players: any[];
+}) {
   let teamName = value;
-  
+
   if (value) {
     // If we can't find a flag code for this string, it might be a player
     if (!flagCode(value)) {
-      const p = players.find((p) => p.player_name.toLowerCase().includes(value.toLowerCase()) || value.toLowerCase().includes(p.player_name.toLowerCase()));
+      let found = false;
+      const p = players.find(
+        (p) =>
+          p.player_name.toLowerCase().includes(value.toLowerCase()) ||
+          value.toLowerCase().includes(p.player_name.toLowerCase()),
+      );
       if (p) {
         teamName = p.team_name;
+        found = true;
+      }
+
+      // Fallback to hardcoded list if not in DB yet
+      if (!found) {
+        const valLower = value.toLowerCase().trim();
+        for (const [pName, tName] of Object.entries(KNOWN_PLAYERS)) {
+          if (valLower.includes(pName) || pName.includes(valLower)) {
+            teamName = tName;
+            found = true;
+            break;
+          }
+        }
+      }
+
+      // Fallback: check if user wrote "Player Name (Country)"
+      if (!found) {
+        const countryMatch = value.match(/\((.*?)\)/);
+        if (countryMatch && flagCode(countryMatch[1])) {
+          teamName = countryMatch[1];
+        }
       }
     }
   }
 
   return (
     <div className="rounded-2xl border border-border/60 bg-card/50 p-4 flex flex-col justify-center">
-      <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">{label}</div>
+      <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">
+        {label}
+      </div>
       <div className="font-semibold text-lg flex items-center gap-2">
         {value ? (
           <>
             <Flag name={teamName || ""} className="w-7 h-auto rounded-[2px]" />
-            <span className="line-clamp-1" title={value}>{value}</span>
+            <span className="line-clamp-1" title={value}>
+              {value}
+            </span>
           </>
         ) : (
           <span className="text-muted-foreground/50">-</span>
