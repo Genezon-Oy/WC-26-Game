@@ -152,69 +152,69 @@ function StatisticsPage() {
                 ) : (
                   <ul className="divide-y divide-border/50">
                     {playersQuery.data?.slice(0, 50).map((p, i) => (
-                      <React.Fragment key={p.id}>
-                        <li className="flex items-center justify-between p-4 hover:bg-accent/30 transition-colors">
-                          <div className="flex items-center gap-4">
-                            <span
-                              className={`w-6 text-center font-bold ${i === 0 ? "text-yellow-500" : i === 1 ? "text-slate-400" : i === 2 ? "text-amber-600" : "text-muted-foreground"}`}
-                            >
-                              {i + 1}.
-                            </span>
-                            <span className="drop-shadow-sm">
-                              <Flag name={p.team_name} className="w-8 h-auto rounded-sm" />
-                            </span>
-                            <div>
+                      <li
+                        key={p.id}
+                        className="flex items-center justify-between p-4 hover:bg-accent/30 transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          <span
+                            className={`w-6 text-center font-bold ${i === 0 ? "text-yellow-500" : i === 1 ? "text-slate-400" : i === 2 ? "text-amber-600" : "text-muted-foreground"}`}
+                          >
+                            {i + 1}.
+                          </span>
+                          <span className="drop-shadow-sm">
+                            <Flag name={p.team_name} className="w-8 h-auto rounded-sm" />
+                          </span>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-semibold">{p.player_name}</p>
-                              <p className="text-xs text-muted-foreground">{p.team_name}</p>
+                              {(() => {
+                                const predictors = futuresQuery.data
+                                  ?.filter(
+                                    (f) =>
+                                      f.golden_boot &&
+                                      (p.player_name
+                                        .toLowerCase()
+                                        .includes(f.golden_boot.toLowerCase()) ||
+                                        f.golden_boot
+                                          .toLowerCase()
+                                          .includes(p.player_name.toLowerCase())),
+                                  )
+                                  .map((f) => f.username);
+                                if (predictors && predictors.length > 0) {
+                                  return (
+                                    <div className="flex flex-wrap gap-1">
+                                      {predictors.map((u) => (
+                                        <span
+                                          key={u}
+                                          className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 text-[10px] font-bold px-1.5 py-0.5 rounded-sm"
+                                        >
+                                          {u}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </div>
+                            <p className="text-xs text-muted-foreground">{p.team_name}</p>
                           </div>
-                          <div className="flex flex-col items-end">
-                            <span className="font-bold text-lg">
-                              {p.goals}{" "}
-                              <span className="text-xs font-normal text-muted-foreground">
-                                maalia
-                              </span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="font-bold text-lg">
+                            {p.goals}{" "}
+                            <span className="text-xs font-normal text-muted-foreground">
+                              maalia
                             </span>
-                            {p.assists > 0 && (
-                              <span className="text-xs text-muted-foreground">
-                                ({p.assists} syöttöä)
-                              </span>
-                            )}
-                          </div>
-                        </li>
-                        {(() => {
-                          const predictors = futuresQuery.data
-                            ?.filter(
-                              (f) =>
-                                f.golden_boot &&
-                                (p.player_name
-                                  .toLowerCase()
-                                  .includes(f.golden_boot.toLowerCase()) ||
-                                  f.golden_boot
-                                    .toLowerCase()
-                                    .includes(p.player_name.toLowerCase())),
-                            )
-                            .map((f) => f.username);
-                          if (predictors && predictors.length > 0) {
-                            return (
-                              <li className="px-4 pb-3 pt-0 text-xs text-muted-foreground bg-accent/10 flex flex-wrap gap-1">
-                                <span className="font-semibold text-primary/80">
-                                  Maalikuningas-veikkaukset:
-                                </span>
-                                {predictors.map((u) => (
-                                  <span
-                                    key={u}
-                                    className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-sm"
-                                  >
-                                    {u}
-                                  </span>
-                                ))}
-                              </li>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </React.Fragment>
+                          </span>
+                          {p.assists > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              ({p.assists} syöttöä)
+                            </span>
+                          )}
+                        </div>
+                      </li>
                     ))}
                   </ul>
                 )}
@@ -238,67 +238,67 @@ function StatisticsPage() {
                       .sort((a, b) => b.assists - a.assists)
                       .slice(0, 50)
                       .map((p, i) => (
-                        <React.Fragment key={p.id}>
-                          <li className="flex items-center justify-between p-4 hover:bg-accent/30 transition-colors">
-                            <div className="flex items-center gap-4">
-                              <span className="w-6 text-center font-bold text-muted-foreground">
-                                {i + 1}.
-                              </span>
-                              <span className="drop-shadow-sm">
-                                <Flag name={p.team_name} className="w-8 h-auto rounded-sm" />
-                              </span>
-                              <div>
+                        <li
+                          key={p.id}
+                          className="flex items-center justify-between p-4 hover:bg-accent/30 transition-colors"
+                        >
+                          <div className="flex items-center gap-4">
+                            <span className="w-6 text-center font-bold text-muted-foreground">
+                              {i + 1}.
+                            </span>
+                            <span className="drop-shadow-sm">
+                              <Flag name={p.team_name} className="w-8 h-auto rounded-sm" />
+                            </span>
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <p className="font-semibold">{p.player_name}</p>
-                                <p className="text-xs text-muted-foreground">{p.team_name}</p>
+                                {(() => {
+                                  const predictors = futuresQuery.data
+                                    ?.filter(
+                                      (f) =>
+                                        f.most_assists &&
+                                        (p.player_name
+                                          .toLowerCase()
+                                          .includes(f.most_assists.toLowerCase()) ||
+                                          f.most_assists
+                                            .toLowerCase()
+                                            .includes(p.player_name.toLowerCase())),
+                                    )
+                                    .map((f) => f.username);
+                                  if (predictors && predictors.length > 0) {
+                                    return (
+                                      <div className="flex flex-wrap gap-1">
+                                        {predictors.map((u) => (
+                                          <span
+                                            key={u}
+                                            className="bg-blue-500/10 text-blue-600 dark:text-blue-500 text-[10px] font-bold px-1.5 py-0.5 rounded-sm"
+                                          >
+                                            {u}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
                               </div>
+                              <p className="text-xs text-muted-foreground">{p.team_name}</p>
                             </div>
-                            <div className="flex flex-col items-end">
-                              <span className="font-bold text-lg">
-                                {p.assists}{" "}
-                                <span className="text-xs font-normal text-muted-foreground">
-                                  syöttöä
-                                </span>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className="font-bold text-lg">
+                              {p.assists}{" "}
+                              <span className="text-xs font-normal text-muted-foreground">
+                                syöttöä
                               </span>
-                              {p.goals > 0 && (
-                                <span className="text-xs text-muted-foreground">
-                                  ({p.goals} maalia)
-                                </span>
-                              )}
-                            </div>
-                          </li>
-                          {(() => {
-                            const predictors = futuresQuery.data
-                              ?.filter(
-                                (f) =>
-                                  f.most_assists &&
-                                  (p.player_name
-                                    .toLowerCase()
-                                    .includes(f.most_assists.toLowerCase()) ||
-                                    f.most_assists
-                                      .toLowerCase()
-                                      .includes(p.player_name.toLowerCase())),
-                              )
-                              .map((f) => f.username);
-                            if (predictors && predictors.length > 0) {
-                              return (
-                                <li className="px-4 pb-3 pt-0 text-xs text-muted-foreground bg-accent/10 flex flex-wrap gap-1">
-                                  <span className="font-semibold text-primary/80">
-                                    Syöttökuningas-veikkaukset:
-                                  </span>
-                                  {predictors.map((u) => (
-                                    <span
-                                      key={u}
-                                      className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-sm"
-                                    >
-                                      {u}
-                                    </span>
-                                  ))}
-                                </li>
-                              );
-                            }
-                            return null;
-                          })()}
-                        </React.Fragment>
+                            </span>
+                            {p.goals > 0 && (
+                              <span className="text-xs text-muted-foreground">
+                                ({p.goals} maalia)
+                              </span>
+                            )}
+                          </div>
+                        </li>
                       ))}
                   </ul>
                 )}
