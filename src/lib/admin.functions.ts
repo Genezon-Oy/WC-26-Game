@@ -430,8 +430,19 @@ export async function performPollLive() {
           ? "live"
           : "scheduled";
 
-    const homeScore = m.score.regularTime?.home ?? m.score.fullTime.home;
-    const awayScore = m.score.regularTime?.away ?? m.score.fullTime.away;
+    let homeScore = m.score.regularTime?.home;
+    let awayScore = m.score.regularTime?.away;
+
+    // If regularTime is null, check if extraTime exists to calculate 90min score
+    if (homeScore === null || homeScore === undefined) {
+      if (m.score.extraTime?.home != null && m.score.fullTime?.home != null) {
+        homeScore = m.score.fullTime.home - m.score.extraTime.home;
+        awayScore = m.score.fullTime.away - m.score.extraTime.away;
+      } else {
+        homeScore = m.score.fullTime?.home ?? null;
+        awayScore = m.score.fullTime?.away ?? null;
+      }
+    }
 
     let winner = null;
     if (
@@ -460,8 +471,8 @@ export async function performPollLive() {
         away_score: awayScore,
         home_score_ht: m.score.halfTime.home,
         away_score_ht: m.score.halfTime.away,
-        home_score_et: m.score.extraTime?.home ?? null,
-        away_score_et: m.score.extraTime?.away ?? null,
+        home_score_et: m.score.extraTime?.home != null ? m.score.fullTime?.home ?? null : null,
+        away_score_et: m.score.extraTime?.away != null ? m.score.fullTime?.away ?? null : null,
         home_score_pen: m.score.penalties?.home ?? null,
         away_score_pen: m.score.penalties?.away ?? null,
         status,
@@ -496,8 +507,8 @@ export async function performPollLive() {
         away_score: awayScore,
         home_score_ht: m.score.halfTime.home,
         away_score_ht: m.score.halfTime.away,
-        home_score_et: m.score.extraTime?.home ?? null,
-        away_score_et: m.score.extraTime?.away ?? null,
+        home_score_et: m.score.extraTime?.home != null ? m.score.fullTime?.home ?? null : null,
+        away_score_et: m.score.extraTime?.away != null ? m.score.fullTime?.away ?? null : null,
         home_score_pen: m.score.penalties?.home ?? null,
         away_score_pen: m.score.penalties?.away ?? null,
         status,
