@@ -146,7 +146,7 @@ function PlayerProfilePage() {
                 <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
                   Välierissä
                 </div>
-                <div className="text-xs text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                <div className="text-xs text-muted-foreground font-medium border border-border/60 bg-background/50 px-2 py-0.5 rounded-full">
                   +5p / joukkue
                 </div>
               </div>
@@ -290,7 +290,7 @@ function FutureCard({
         <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
           {label}
         </div>
-        <div className="text-xs text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">
+        <div className="text-xs text-muted-foreground font-medium border border-border/60 bg-background/50 px-2 py-0.5 rounded-full">
           +{points}p
         </div>
       </div>
