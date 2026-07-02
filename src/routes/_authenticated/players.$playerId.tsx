@@ -128,12 +128,27 @@ function PlayerProfilePage() {
         </h2>
         {futures ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            <FutureCard label="Mestari" value={futures.winner} players={players} />
-            <FutureCard label="Maalikuningas" value={futures.golden_boot} players={players} />
-            <FutureCard label="Syöttökuningas" value={futures.most_assists} players={players} />
+            <FutureCard label="Mestari" value={futures.winner} points={22} players={players} />
+            <FutureCard
+              label="Maalikuningas"
+              value={futures.golden_boot}
+              points={16}
+              players={players}
+            />
+            <FutureCard
+              label="Syöttökuningas"
+              value={futures.most_assists}
+              points={13}
+              players={players}
+            />
             <div className="rounded-2xl border border-border/60 bg-card/50 p-4 flex flex-col justify-center">
-              <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">
-                Välierissä
+              <div className="flex justify-between items-center mb-2">
+                <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                  Välierissä
+                </div>
+                <div className="text-xs text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                  +5p / joukkue
+                </div>
               </div>
               <ul className="text-sm font-semibold space-y-2 mt-2">
                 {futures.semi_finalists?.map((t: string, i: number) => {
@@ -223,10 +238,12 @@ const KNOWN_PLAYERS: Record<string, string> = {
 function FutureCard({
   label,
   value,
+  points,
   players,
 }: {
   label: string;
   value: string | null;
+  points: number;
   players: any[];
 }) {
   let teamName = value;
@@ -269,8 +286,13 @@ function FutureCard({
 
   return (
     <div className="rounded-2xl border border-border/60 bg-card/50 p-4 flex flex-col justify-center">
-      <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-2">
-        {label}
+      <div className="flex justify-between items-center mb-2">
+        <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+          {label}
+        </div>
+        <div className="text-xs text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">
+          +{points}p
+        </div>
       </div>
       <div className="font-semibold text-lg flex items-center gap-2">
         {value ? (
