@@ -9,7 +9,7 @@ export interface OFMatch {
   team2: string;
   group?: string; // "Group A"
   ground?: string;
-  score?: { ht?: [number, number]; ft?: [number, number] };
+  score?: { ht?: [number, number]; ft?: [number, number]; et?: [number, number]; p?: [number, number] };
 }
 
 export interface OFData {

@@ -187,7 +187,7 @@ export async function performSyncFixtures() {
 
   const { data: existingMatches } = await supabaseAdmin
     .from("matches")
-    .select("match_key, kickoff_at, home_team, away_team");
+    .select("match_key, kickoff_at, home_team, away_team, stage");
 
   // Upsert teams
   const teamsMap = new Map<string, any>();
@@ -212,13 +212,19 @@ export async function performSyncFixtures() {
     const t2 = normalizeTeamName(m.team2) as string;
     const kickoff = toKickoffISO(m.date, m.time);
 
-    // Check if match already exists (to avoid duplicates from timezone differences)
+    // Check if match already exists (to avoid duplicates from timezone differences or placeholders)
     const existing = (existingMatches ?? []).find(e => {
       const sameTeams = (e.home_team === t1 && e.away_team === t2) ||
                         (e.home_team === t2 && e.away_team === t1);
-      if (!sameTeams) return false;
       const timeDiff = Math.abs(new Date(e.kickoff_at).getTime() - new Date(kickoff).getTime());
-      return timeDiff < 48 * 60 * 60 * 1000; // 48 hours
+      
+      if (sameTeams) return timeDiff < 48 * 60 * 60 * 1000; // 48 hours for timezone shifts
+      
+      // For knockouts, if time is exact and stage matches, it's the same match (placeholder resolved)
+      if (timeDiff === 0 && e.stage === stage && stage !== "group") {
+        return true;
+      }
+      return false;
     });
 
     const mKey = existing ? existing.match_key : matchKey({ ...m, team1: t1, team2: t2 });
@@ -410,20 +416,32 @@ export async function performPollLive() {
     .from("matches")
     .select("id, match_key, stage, matchday, kickoff_at, venue, home_team, away_team, home_score, away_score, status");
 
-  const updatesToUpsert: import("./../integrations/supabase/types").Database["public"]["Tables"]["matches"]["Insert"][] =
-    [];
+  const updatesToUpsert: any[] = [];
   let updated = 0;
 
   for (const m of validMatches) {
     const date = m.utcDate.slice(0, 10);
     const matchKeyStr = `${date}__${[m.homeTeam.name, m.awayTeam.name].sort().join("__vs__")}`;
 
+    let stage = "group";
+    if (m.stage === "FINAL") stage = "final";
+    else if (m.stage === "THIRD_PLACE") stage = "third-place";
+    else if (m.stage === "SEMI_FINALS") stage = "semi-final";
+    else if (m.stage === "QUARTER_FINALS") stage = "quarter-final";
+    else if (m.stage === "LAST_16") stage = "round-of-16";
+    else if (m.stage === "LAST_32") stage = "round-of-32";
+
     const existing = (existingMatches ?? []).find(e => {
       const sameTeams = (e.home_team === m.homeTeam.name && e.away_team === m.awayTeam.name) ||
                         (e.home_team === m.awayTeam.name && e.away_team === m.homeTeam.name);
-      if (!sameTeams) return false;
       const timeDiff = Math.abs(new Date(e.kickoff_at).getTime() - new Date(m.utcDate).getTime());
-      return timeDiff < 48 * 60 * 60 * 1000;
+      
+      if (sameTeams) return timeDiff < 48 * 60 * 60 * 1000;
+      
+      if (timeDiff === 0 && e.stage === stage && stage !== "group") {
+        return true;
+      }
+      return false;
     });
 
     const status =
@@ -433,12 +451,17 @@ export async function performPollLive() {
           ? "live"
           : "scheduled";
 
-    let homeScore = m.score.regularTime?.home;
-    let awayScore = m.score.regularTime?.away;
+    let homeScore: number | null = m.score.regularTime?.home ?? null;
+    let awayScore: number | null = m.score.regularTime?.away ?? null;
 
     // If regularTime is null, check if extraTime exists to calculate 90min score
     if (homeScore === null || homeScore === undefined) {
-      if (m.score.extraTime?.home != null && m.score.fullTime?.home != null) {
+      if (
+        m.score.extraTime?.home != null &&
+        m.score.extraTime?.away != null &&
+        m.score.fullTime?.home != null &&
+        m.score.fullTime?.away != null
+      ) {
         homeScore = m.score.fullTime.home - m.score.extraTime.home;
         awayScore = m.score.fullTime.away - m.score.extraTime.away;
       } else {
@@ -461,6 +484,8 @@ export async function performPollLive() {
     if (existing) {
       // Only update if something actually changed
       if (
+        existing.home_team === m.homeTeam.name &&
+        existing.away_team === m.awayTeam.name &&
         existing.status === status &&
         existing.home_score === homeScore &&
         existing.away_score === awayScore
@@ -470,6 +495,8 @@ export async function performPollLive() {
 
       updatesToUpsert.push({
         ...existing,
+        home_team: m.homeTeam.name as string,
+        away_team: m.awayTeam.name as string,
         home_score: homeScore,
         away_score: awayScore,
         home_score_ht: m.score.halfTime.home,
@@ -483,14 +510,6 @@ export async function performPollLive() {
       });
     } else {
       // New match missing from DB! Insert it.
-      let stage = "group";
-      if (m.stage === "FINAL") stage = "final";
-      else if (m.stage === "THIRD_PLACE") stage = "third-place";
-      else if (m.stage === "SEMI_FINALS") stage = "semi-final";
-      else if (m.stage === "QUARTER_FINALS") stage = "quarter-final";
-      else if (m.stage === "LAST_16") stage = "round-of-16";
-      else if (m.stage === "LAST_32") stage = "round-of-32";
-
       let matchday = "Knockout";
       if (stage === "round-of-32") matchday = "Round of 32";
       if (stage === "round-of-16") matchday = "Round of 16";
