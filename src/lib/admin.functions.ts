@@ -220,8 +220,11 @@ export async function performSyncFixtures() {
       
       if (sameTeams) return timeDiff < 48 * 60 * 60 * 1000; // 48 hours for timezone shifts
       
-      // For knockouts, if time is exact and stage matches, it's the same match (placeholder resolved)
-      if (timeDiff === 0 && e.stage === stage && stage !== "group") {
+      const isPlaceholder = e.home_team.match(/^(W|RU|A|B|C|D|E|F|G|H|L)\d*$/i) || 
+                            e.away_team.match(/^(W|RU|A|B|C|D|E|F|G|H|L)\d*$/i);
+      
+      // For knockouts, if time is exact and it's a placeholder, it's the same match
+      if (timeDiff === 0 && e.stage !== "group" && (e.stage === stage || isPlaceholder)) {
         return true;
       }
       return false;
@@ -438,7 +441,10 @@ export async function performPollLive() {
       
       if (sameTeams) return timeDiff < 48 * 60 * 60 * 1000;
       
-      if (timeDiff === 0 && e.stage === stage && stage !== "group") {
+      const isPlaceholder = e.home_team.match(/^(W|RU|A|B|C|D|E|F|G|H|L)\d*$/i) || 
+                            e.away_team.match(/^(W|RU|A|B|C|D|E|F|G|H|L)\d*$/i);
+
+      if (timeDiff === 0 && e.stage !== "group" && (e.stage === stage || isPlaceholder)) {
         return true;
       }
       return false;
