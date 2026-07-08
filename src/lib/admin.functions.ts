@@ -232,11 +232,30 @@ export async function performSyncFixtures() {
 
     const mKey = existing ? existing.match_key : matchKey({ ...m, team1: t1, team2: t2 });
 
+    const isT1Placeholder = !!t1.match(/^(W|RU|A|B|C|D|E|F|G|H|L)\d*$/i);
+    const isT2Placeholder = !!t2.match(/^(W|RU|A|B|C|D|E|F|G|H|L)\d*$/i);
+    
+    let finalHomeTeam = t1;
+    let finalAwayTeam = t2;
+    if (existing) {
+      const existingHomePlaceholder = !!existing.home_team.match(/^(W|RU|A|B|C|D|E|F|G|H|L)\d*$/i);
+      const existingAwayPlaceholder = !!existing.away_team.match(/^(W|RU|A|B|C|D|E|F|G|H|L)\d*$/i);
+      
+      if (!existingHomePlaceholder && isT1Placeholder) finalHomeTeam = existing.home_team;
+      if (!existingAwayPlaceholder && isT2Placeholder) finalAwayTeam = existing.away_team;
+      
+      // Prevent duplicate teams in case of partial manual cross-assignments
+      if (finalHomeTeam === finalAwayTeam) {
+        finalHomeTeam = existing.home_team;
+        finalAwayTeam = existing.away_team;
+      }
+    }
+
     const winner = m.score?.ft
       ? m.score.ft[0] > m.score.ft[1]
-        ? t1
+        ? finalHomeTeam
         : m.score.ft[1] > m.score.ft[0]
-          ? t2
+          ? finalAwayTeam
           : "draw"
       : null;
     return {
@@ -246,8 +265,8 @@ export async function performSyncFixtures() {
       matchday: m.round,
       kickoff_at: kickoff,
       venue: m.ground ?? null,
-      home_team: t1,
-      away_team: t2,
+      home_team: finalHomeTeam,
+      away_team: finalAwayTeam,
       home_score: m.score?.ft?.[0] ?? null,
       away_score: m.score?.ft?.[1] ?? null,
       home_score_ht: m.score?.ht?.[0] ?? null,
